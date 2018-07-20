@@ -212,19 +212,19 @@ for j in range(int(min(final_array)), int(max(final_array)) + 1):
     if countTotal != 0: accuracy_per_single_score[j + addIndex] = float(countCorrect) / countTotal
 
 #Plot
-#x = np.arange(len(accuracy_per_single_score))
 x = np.arange(int(min(final_array)), int(max(final_array)) + 1)
 
 fig, ax = plt.subplots()
-plt.xlabel('Sentiment Score')
+plt.xlabel('Sentiment Score\n\u2190 Strongly Negative | Strongly Positive\u2192')
 plt.ylabel('Accuracy (%)')
 plt.title('Emotional Keyword Counting/Spotting Classifier\nAccuracy per individual Score')
 plt.bar(x, accuracy_per_single_score)
+#ax.set_xlim([-50,50])
 ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
 ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
+ax.xaxis.set
 
 plt.show()
-
 ##
 
 for i, score in enumerate(final_array):
