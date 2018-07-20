@@ -1,5 +1,5 @@
 '''
-Sentiment Analysis Using Different Techniques. Bo Pang and Lillian Lee (ACL 2004) Dataset of Movie Reviews
+Sentiment Analysis Using Interesting Techniques. Bo Pang and Lillian Lee (ACL 2004) Dataset of Movie Reviews
 '''
 
 from sklearn.model_selection import train_test_split
@@ -106,7 +106,7 @@ parameters = {'tfidf__use_idf': [True],
               'vect__strip_accents': ['unicode'],
               'vect__tokenizer': [LemmaTokenizer()],}
 
-# Run_Classifier(pipeline1, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names)
+#Run_Classifier(pipeline1, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names)
 
 
 ### LET'S BUILD : SGDC-SVM
@@ -133,7 +133,7 @@ parameters = {'clf__alpha': [1e-3],
               'vect__strip_accents': ['unicode'],
               'vect__tokenizer': [LemmaTokenizer()],}
 
-#Run_Classifier(pipeline2, parameters, data_train, data_test, labels_train, labels_test)
+#Run_Classifier(pipeline2, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names)
 
 
 ## LET'S BUILD : SVM
@@ -160,7 +160,7 @@ parameters = {'clf__C': [500],
               'vect__strip_accents': ['unicode'],
               'vect__tokenizer': [LemmaTokenizer()],}
 
-#Run_Classifier(pipeline3, parameters, data_train, data_test, labels_train, labels_test)
+#Run_Classifier(pipeline3, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names)
 
 
 ### LET'S BUILD : Opinion Lexicon - Counting/Spotting Sentimental Words
@@ -224,8 +224,8 @@ ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
 ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
 ax.xaxis.set
 
-plt.show()
-##
+#plt.show()
+## ^ SHOW ^
 
 for i, score in enumerate(final_array):
     if score >= 0:
@@ -233,95 +233,5 @@ for i, score in enumerate(final_array):
     else:
         final_array[i] = 0
 
-Print_Result_Metrics(labels_test, final_array, dataset.target_names)
+Print_Result_Metrics(labels_test, final_array, dataset.target_names)  
 
-# print('\n- - - - - RESULT METRICS - - - - -')
-# print('Exact Accuracy: ', metrics.accuracy_score(labels_test, final_array))
-# print(metrics.classification_report(labels_test, final_array, target_names=dataset.target_names))
-# print(metrics.confusion_matrix(labels_test, final_array))
-
-
-# dataActual = []
-# #data_labels = []
-# for i, filename in enumerate(os.listdir('./moviereviews/pos')):
-#     with open('./moviereviews/pos/' + filename) as f:
-#        # print(f)     
-#         dataActual.append(1) 
-
-# for filename in os.listdir('./sentoken/neg'):
-#     with open('./sentoken/neg/' + filename) as f:
-#         dataActual.append(1) 
-
-# dataPredicted = []
-# for i, filename in enumerate(os.listdir('./sentoken/pos')):
-#     with open('./sentoken/pos/' + filename) as f:
-        
-#         data = f.read().replace('\n', '')
-                     
-#         # 2. Remove non-letters     
-#         letters_only = re.sub("[^a-zA-Z]", " ", data) 
-#         # 3. Convert to lower case, split into individual words
-#         words = letters_only.split()
-
-#         words = map(str.lower,words)
-#         #
-#         # 4. In Python, searching a set is much faster than searching
-#         #   a list, so convert the stop words to a set
-#         stops = set(stopwords.words("english"))                  
-#         # 
-#         # 5. Remove stop words
-#         meaningful_words = [w for w in words if not w in stops]  
-
-#         count = 0
-#         for singleword in meaningful_words:
-#             if singleword in pos_words:
-#                 if i == 120:
-#                     print(singleword)                
-#                 count += 1
-#             elif singleword in neg_words:
-#                 #if i == 120:
-#                 #    print(singleword)
-#                 count -= 1
-
-#         #print(str(count) + " ID " + str(i))
-#         if i == 120:
-#             print(data)
-
-#         if count >= 0:
-#             dataPredicted.append(1) 
-#         else:
-#             dataPredicted.append(0)
-
-# for filename in os.listdir('./sentoken/neg'):
-#     with open('./sentoken/neg/' + filename) as f:
-#         data = f.read().replace('\n', '')
-#         # 2. Remove non-letters     
-#         letters_only = re.sub("[^a-zA-Z]", " ", data) 
-#         # 3. Convert to lower case, split into individual words
-#         words = letters_only.split()
-
-#         words = map(str.lower,words)
-#         #
-#         # 4. In Python, searching a set is much faster than searching
-#         #   a list, so convert the stop words to a set
-#         stops = set(stopwords.words("english"))                  
-#         # 
-#         # 5. Remove stop words
-#         meaningful_words = [w for w in words if not w in stops]  
-
-#         count = 0
-#         for singleword in meaningful_words:
-#             if singleword in pos_words:
-#                 count += 1
-#             elif singleword in neg_words:
-#                 count -= 1
-
-#         if count >= 0:
-#             dataPredicted.append(1) 
-#         else:
-#             dataPredicted.append(0)
-
-# print(dataPredicted.count(0))
-# print(dataPredicted.count(1))
-
-   
