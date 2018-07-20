@@ -59,6 +59,10 @@ class LemmaTokenizer(object):
     def __init__(self):
         self.wnl = WordNetLemmatizer()
     def __call__(self, doc):
+        # Debug
+        # print(doc)        
+        # for t in word_tokenize(doc):  
+        #     print(self.wnl.lemmatize(t.lower()))
         return [self.wnl.lemmatize(t.lower()) for t in word_tokenize(doc)]
 
 # PREPROCESSING
@@ -71,7 +75,11 @@ stopwords_complete_lemmatized = set([wnl.lemmatize(word) for word in stopwords_c
 np.set_printoptions(precision=10)  # Numpy Print Precision
 
 # Split where X and y are pairs: data & labels
-data_train, data_test, labels_train, labels_test = train_test_split(dataset.data, dataset.target, test_size=0.30, random_state=None)
+data_train, data_test, labels_train, labels_test = train_test_split(dataset.data, dataset.target, test_size=0.30, random_state=22)
+
+
+# LE'S BUILD : SentiWordNet - Counting Sentimental Words
+
 
 
 # LET'S BUILD : NaiveBayes
@@ -96,7 +104,7 @@ parameters = {'tfidf__use_idf': [True],
               'vect__strip_accents': ['unicode'],
               'vect__tokenizer': [LemmaTokenizer()],}
 
-Run_Classifier(pipeline1, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names)
+# Run_Classifier(pipeline1, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names)
 
 
 # LET'S BUILD : SGDC-SVM
@@ -153,16 +161,16 @@ parameters = {'clf__C': [500],
 #Run_Classifier(pipeline3, parameters, data_train, data_test, labels_train, labels_test)
 
 
-# LET'S BUILD : Counting Sentimental Words
+# LET'S BUILD : Opinion Lexicon - Counting Sentimental Words
 
 # Get Sentiment Words from a Lexicon
 pos_words = []
 neg_words = []
-for line in open('positive-words.txt', 'r'):
-    pos_words.append(wnl.lemmatize(line.rstrip()))  # Must strip Newlines
+for line in open('./opinion_lexicon/positive-words.txt', 'r'):
+    pos_words.append(line.rstrip())  # Must strip Newlines
 
-for line in open('negative-words.txt', 'r'):
-    neg_words.append(wnl.lemmatize(line.rstrip()))  # Must strip Newlines
+for line in open('./opinion_lexicon/negative-words.txt', 'r'):
+    neg_words.append(line.rstrip())  # Must strip Newlines  
 
 count_vect = CountVectorizer(max_df=0.80, min_df=5, analyzer='word', stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
 data_train_counts = count_vect.fit_transform(data_test)
