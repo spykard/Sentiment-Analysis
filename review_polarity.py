@@ -66,7 +66,7 @@ class LemmaTokenizer(object):
         return [self.wnl.lemmatize(t.lower()) for t in word_tokenize(doc)]
 
 # PREPROCESSING
-dataset = load_files('./review_polarity/txt_sentoken', shuffle=False)
+dataset = load_files('./datasets/review_polarity/txt_sentoken', shuffle=False)
 
 stopwords_complete = set(stopwords.words('english')).union(set(ENGLISH_STOP_WORDS))
 wnl = WordNetLemmatizer()
