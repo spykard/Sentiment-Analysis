@@ -17,6 +17,8 @@ from nltk import word_tokenize
 from nltk.stem import WordNetLemmatizer
 import numpy as np
 import copy
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 from sklearn.datasets import load_files
 import re
@@ -65,7 +67,7 @@ class LemmaTokenizer(object):
         #     print(self.wnl.lemmatize(t.lower()))
         return [self.wnl.lemmatize(t.lower()) for t in word_tokenize(doc)]
 
-# PREPROCESSING
+### PREPROCESSING
 dataset = load_files('./datasets/review_polarity/txt_sentoken', shuffle=False)
 
 stopwords_complete = set(stopwords.words('english')).union(set(ENGLISH_STOP_WORDS))
@@ -78,11 +80,11 @@ np.set_printoptions(precision=10)  # Numpy Print Precision
 data_train, data_test, labels_train, labels_test = train_test_split(dataset.data, dataset.target, test_size=0.30, random_state=22)
 
 
-# LE'S BUILD : SentiWordNet - Counting Sentimental Words
+### LET'S BUILD : SentiWordNet - Counting/Spotting Sentimental Words
 
 
 
-# LET'S BUILD : NaiveBayes
+### LET'S BUILD : NaiveBayes
 pipeline1 = Pipeline([('vect', CountVectorizer()),
                       ('tfidf', TfidfTransformer()),
                       ('clf', MultinomialNB()),])
@@ -107,7 +109,7 @@ parameters = {'tfidf__use_idf': [True],
 # Run_Classifier(pipeline1, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names)
 
 
-# LET'S BUILD : SGDC-SVM
+### LET'S BUILD : SGDC-SVM
 pipeline2 = Pipeline([('vect', CountVectorizer()),
                       ('tfidf', TfidfTransformer()),
                       ('clf', SGDClassifier(loss='hinge', penalty='l2', max_iter=1000, tol=None, n_jobs=-1)),])
@@ -134,7 +136,7 @@ parameters = {'clf__alpha': [1e-3],
 #Run_Classifier(pipeline2, parameters, data_train, data_test, labels_train, labels_test)
 
 
-# LET'S BUILD : SVM
+## LET'S BUILD : SVM
 pipeline3 = Pipeline([('vect', CountVectorizer()),
                       ('tfidf', TfidfTransformer()),
                       ('clf', LinearSVC(loss='hinge', penalty='l2', max_iter=1000, dual=True)),]) # dual for Text Classification
@@ -161,7 +163,7 @@ parameters = {'clf__C': [500],
 #Run_Classifier(pipeline3, parameters, data_train, data_test, labels_train, labels_test)
 
 
-# LET'S BUILD : Opinion Lexicon - Counting Sentimental Words
+### LET'S BUILD : Opinion Lexicon - Counting/Spotting Sentimental Words
 
 # Get Sentiment Words from a Lexicon
 pos_words = []
@@ -188,6 +190,42 @@ for word in neg_words:  # For each Sentimental Word update the Array
     if word in vocabulary:
         for i in range(0, len(data_test)):
             final_array[i] -= data_array[i, vocabulary.get(word)]            
+
+## Also Count the Accuracy of every Score individually
+accuracy_per_single_score = np.zeros(int(max(final_array) - min(final_array) + 1.0))  # Number of Individual Scores
+accuracy_per_single_score_labels = []
+
+addIndex = int(abs(min(final_array)))  # Add to make all indexes of Array >= 0
+for j in range(int(min(final_array)), int(max(final_array)) + 1):
+#for j in range(-20, 20):
+    countCorrect = 0
+    countTotal = 0
+    for i, score in enumerate(final_array):
+        if (int(score) == j):
+            if (score >= 0 and labels_test[i] == 1):
+                countCorrect += 1
+            elif (score < 0 and labels_test[i] == 0):
+                countCorrect += 1
+            countTotal += 1    
+
+    if j % 5 == 0: accuracy_per_single_score_labels.append(j)  # j mod 5     
+    if countTotal != 0: accuracy_per_single_score[j + addIndex] = float(countCorrect) / countTotal
+
+#Plot
+#x = np.arange(len(accuracy_per_single_score))
+x = np.arange(int(min(final_array)), int(max(final_array)) + 1)
+
+fig, ax = plt.subplots()
+plt.xlabel('Sentiment Score')
+plt.ylabel('Accuracy (%)')
+plt.title('Emotional Keyword Counting/Spotting Classifier\nAccuracy per individual Score')
+plt.bar(x, accuracy_per_single_score)
+ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
+
+plt.show()
+
+##
 
 for i, score in enumerate(final_array):
     if score >= 0:
