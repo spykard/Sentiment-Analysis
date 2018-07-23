@@ -8,7 +8,7 @@ from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import LinearSVC
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.model_selection import GridSearchCV
 from sklearn.feature_extraction.stop_words import ENGLISH_STOP_WORDS
 from sklearn import metrics
@@ -26,44 +26,76 @@ from re import sub
 import string
 import os
 
-def Run_Classifier(data_train, data_test, labels_train, labels_test, targetnames, pickle_enable):
-    '''    Run Classifier to use as an Opinion Lexicon (List of Positive and Negative Words)    '''
+def Run_Classifier(data_train, data_test, labels_train, labels_test, targetnames, stopwords_complete_lemmatized, pickle_enable):
+    '''    Run Classifier to be used as an Opinion Pos/Neg Lexicon (List of Positive and Negative Words)    '''
     ## PREPARE
-    pipeline = Pipeline([('vect', CountVectorizer()),
-                        ('tfidf', TfidfTransformer()),
-                        ('clf', MultinomialNB()),])   
-    # Optimal
-    parameters = {'tfidf__use_idf': [True],
-                'vect__max_df': [0.80],
-                'vect__min_df': [5],
-                'vect__ngram_range': [(1, 1)],              
-                'vect__stop_words': [stopwords_complete_lemmatized],
-                'vect__strip_accents': ['unicode'],
-                'vect__tokenizer': [LemmaTokenizer()],}      
+    # Grid Search used to Look for the Best Parameters
+
+    # pipeline = Pipeline([
+    #                     ('union', FeatureUnion(transformer_list=[      
+    #                         ('vect1', CountVectorizer()),  # 1-Gram Vectorizer
+    #                         ('vect2', CountVectorizer()),],  # 2-Gram Vectorizer
+    #                     )),
+
+    #                     ('tfidf', TfidfTransformer()),
+    #                     ('clf', MultinomialNB()),])       
+    # parameters = {'tfidf__use_idf': [True],
+    #             'union__transformer_weights': [{'vect1':1.0, 'vect2':1.0},],
+    #             'union__vect1__max_df': [0.90, 0.80, 0.70],
+    #             'union__vect1__min_df': [5, 8],
+    #             'union__vect1__ngram_range': [(1, 1)],              
+    #             'union__vect1__stop_words': [stopwords_complete_lemmatized],
+    #             'union__vect1__strip_accents': ['unicode'],
+    #             'union__vect1__tokenizer': [LemmaTokenizer()],
+    #             'union__vect2__max_df': [0.95, 0.85, 0.75],
+    #             'union__vect2__min_df': [5, 8],
+    #             'union__vect2__ngram_range': [(2, 2)],              
+    #             'union__vect2__stop_words': [stopwords_complete_lemmatized, None],
+    #             'union__vect2__strip_accents': ['unicode'],
+    #             'union__vect2__tokenizer': [LemmaTokenizer()],} 
 
     ## TRAIN
-    grid_go = GridSearchCV(pipeline, parameters, n_jobs=-1)
-    grid_go = grid_go.fit(data_train, labels_train)
-    print('- - - - - BEST PARAMETERS - - - - -')
-    print(grid_go.best_score_)
-    for param_name in sorted(parameters.keys()):
-        print("%s: %r" % (param_name, grid_go.best_params_[param_name]))
+    # grid_go = GridSearchCV(pipeline, parameters, n_jobs=-1)
+    # grid_go = grid_go.fit(data_train, labels_train)
+    # print('- - - - - BEST PARAMETERS - - - - -')
+    # print(grid_go.best_score_, 'Accuracy')
+    # for param_name in sorted(parameters.keys()):
+    #     print("%s: %r" % (param_name, grid_go.best_params_[param_name]))
 
-    print('\n- - - - - DETAILS - - - - -')
-    for i in range(len(grid_go.cv_results_['params'])):
-        results_noStopWords = copy.deepcopy(grid_go.cv_results_['params'][i])
-        results_noStopWords.pop('vect__stop_words')
-        print(i, 'params - %s; mean - %0.10f; std - %0.10f'
-                    #% (list((grid_go.cv_results_['params'][i]).values())[:-1],  # Print all except the Stopwords
-                    % (results_noStopWords.values(),
-                    grid_go.cv_results_['mean_test_score'][i],
-                    grid_go.cv_results_['std_test_score'][i]))
+    # print('\n- - - - - DETAILS - - - - -')
+    # for i in range(len(grid_go.cv_results_['params'])):
+    #     results_noStopWords = copy.deepcopy(grid_go.cv_results_['params'][i])
+    #     if results_noStopWords['union__vect1__stop_words'] is not None:  # Don't Print the list of Stopwords
+    #         results_noStopWords['union__vect1__stop_words'] = ['ListOfStopWords']   
+    #     if results_noStopWords['union__vect2__stop_words'] is not None:
+    #         results_noStopWords['union__vect2__stop_words'] = ['ListOfStopWords']           
+    #     print(i, 'params - %s; mean - %0.10f; std - %0.10f'
+    #                 % (results_noStopWords.values(),
+    #                 grid_go.cv_results_['mean_test_score'][i],
+    #                 grid_go.cv_results_['std_test_score'][i]))
+
+    # Optimal
+    pipeline = Pipeline([
+                        ('union', FeatureUnion(transformer_list=[      
+                            ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
+                            ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
+
+                            transformer_weights={
+                                'vect1': 1.0,
+                                'vect2': 1.0,},
+                        )),
+
+                        ('tfidf', TfidfTransformer(use_idf=True)),
+                        ('clf', MultinomialNB()),])     
+
+    ## TRAIN
+    pipeline.fit(data_train, labels_train)
 
     # Model Persistence (Pickle)
-    if pickle_enable == 1: joblib.dump(grid_go.best_estimator_, './pickled_models/review_polarity/PreTrainedBagOfWords.pkl') 
+    if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/TrainedBagOfWords.pkl') 
 
     ## PREDICT
-    predicted = grid_go.predict(data_test)
+    predicted = pipeline.predict(data_test)
 
     Print_Result_Metrics(labels_test, predicted, targetnames)  
 
@@ -102,9 +134,9 @@ np.set_printoptions(precision=10)  # Numpy Precision when Printing
 data_train, data_test, labels_train, labels_test = train_test_split(dataset.data, dataset.target, test_size=0.30, random_state=22)
 
 # Build
-# Run_Classifier(data_train, data_test, labels_train, labels_test, dataset.target_names, 1)
+Run_Classifier(data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, 1)
 # or Load
-clf = joblib.load('./pickled_models/review_polarity/PreTrainedBagOfWords.pkl')
+#clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords.pkl')
 
 
 ### LET'S BUILD : SentiWordNet - Counting/Spotting Sentimental Words
@@ -127,9 +159,10 @@ clf = joblib.load('./pickled_models/review_polarity/PreTrainedBagOfWords.pkl')
 # IF I GO FOR 2nGRAMS MIN MAX LIMITS NEED TO BE VERY LIGHT SAME FOR STOPWORDS
 
 
-### LET'S BUILD : Opinion Lexicon - Counting/Spotting Sentimental Words
+### LET'S BUILD : Word Spotting and Counting using Opinion Lexicon
 
-# Get Sentiment Words from a Lexicon
+# Model 1
+# Get Sentiment Words from an Opinion Lexicon
 pos_words = []
 neg_words = []
 for line in open('./opinion_lexicon/positive-words.txt', 'r'):
@@ -138,12 +171,12 @@ for line in open('./opinion_lexicon/positive-words.txt', 'r'):
 for line in open('./opinion_lexicon/negative-words.txt', 'r'):
     neg_words.append(line.rstrip())  # Must strip Newlines  
 
-count_vect = CountVectorizer(max_df=0.80, min_df=5, analyzer='word', stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
-data_train_counts = count_vect.fit_transform(data_test)
+count_vect = CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
+data_test_counts = count_vect.fit_transform(data_test)
 
-data_array = data_train_counts.toarray()
+data_array = data_test_counts.toarray()
 vocabulary = count_vect.vocabulary_
-final_array = np.zeros(len(data_test))  # Array of the Word Count for each Document
+final_array = np.zeros(len(data_test))  # Array of the Score for each Document
 
 for word in pos_words:  # For each Sentimental Word update the Array
     if word in vocabulary:
@@ -192,10 +225,9 @@ ax.xaxis.set
 ## ^ SHOW ^
 
 for i, score in enumerate(final_array):
-    if score >= 0:
+    if score >= 1:
         final_array[i] = 1
     else:
         final_array[i] = 0
 
 Print_Result_Metrics(labels_test, final_array, dataset.target_names)  
-
