@@ -140,171 +140,120 @@ data_train, data_test, labels_train, labels_test = train_test_split(dataset.data
 clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords.pkl')
 
 
-# ### LET'S BUILD : Word Spotting and Counting using Opinion Lexicon
+### LET'S BUILD : Word Spotting and Counting using Opinion Lexicon
 
-# ## Model 1
-# # Get Sentiment Words from a generic Opinion Lexicon
-# pos_words = []
-# neg_words = []
-# for line in open('./opinion_lexicon/positive-words.txt', 'r'):
-#     pos_words.append(line.rstrip())  # Must strip Newlines
+## Model 1
+# Get Sentiment Words from a generic Opinion Lexicon
+pos_words = []
+neg_words = []
+for line in open('./opinion_lexicon/positive-words.txt', 'r'):
+    pos_words.append(line.rstrip())  # Must strip Newlines
 
-# for line in open('./opinion_lexicon/negative-words.txt', 'r'):
-#     neg_words.append(line.rstrip())  # Must strip Newlines  
+for line in open('./opinion_lexicon/negative-words.txt', 'r'):
+    neg_words.append(line.rstrip())  # Must strip Newlines  
 
-# count_vect = CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
-# data_test_counts = count_vect.fit_transform(data_test)
+count_vect = CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
+data_test_counts = count_vect.fit_transform(data_test)
 
-# data_array = data_test_counts.toarray()
-# vocabulary = count_vect.vocabulary_
-# final_array = np.zeros(len(data_test))  # Array of the Score for each Document
-# countImpact_Pos = countImpact_Neg = 0
+data_array = data_test_counts.toarray()
+vocabulary = count_vect.vocabulary_
+final_array = np.zeros(len(data_test))  # Array of the Score for each Document
+countImpact_Pos = countImpact_Neg = 0
 
-# for word in pos_words:  # For each Sentimental Word update the Array
-#     if word in vocabulary:
-#         for i in range(0, len(data_test)):
-#             temp = data_array[i, vocabulary.get(word)]
-#             final_array[i] += temp
-#             countImpact_Pos += np.sum(temp)
+for word in pos_words:  # For each Sentimental Word update the Array
+    if word in vocabulary:
+        for i in range(0, len(data_test)):
+            temp = data_array[i, vocabulary.get(word)]
+            final_array[i] += temp
+            countImpact_Pos += np.sum(temp)
 
-# for word in neg_words:  # For each Sentimental Word update the Array
-#     if word in vocabulary:
-#         for i in range(0, len(data_test)):
-#             temp = data_array[i, vocabulary.get(word)]
-#             final_array[i] -= temp
-#             countImpact_Neg += np.sum(temp)        
+for word in neg_words:  # For each Sentimental Word update the Array
+    if word in vocabulary:
+        for i in range(0, len(data_test)):
+            temp = data_array[i, vocabulary.get(word)]
+            final_array[i] -= temp
+            countImpact_Neg += np.sum(temp)        
 
-# ## Also Count the Accuracy of every Score individually
-# accuracy_per_single_score = np.zeros(int(max(final_array) - min(final_array) + 1.0))  # Number of Individual Scores
-# accuracy_per_single_score_labels = []
+## Also Count the Accuracy of every Score individually
+accuracy_per_single_score = np.zeros(int(max(final_array) - min(final_array) + 1.0))  # Number of Individual Scores
+accuracy_per_single_score_labels = []
 
-# addIndex = int(abs(min(final_array)))  # Add to make all indexes of Array >= 0
-# for j in range(int(min(final_array)), int(max(final_array)) + 1):
-# #for j in range(-20, 20):
-#     countCorrect = 0
-#     countTotal = 0
-#     for i, score in enumerate(final_array):
-#         if (int(score) == j):
-#             if (score >= 0 and labels_test[i] == 1):
-#                 countCorrect += 1
-#             elif (score < 0 and labels_test[i] == 0):
-#                 countCorrect += 1
-#             countTotal += 1    
+addIndex = int(abs(min(final_array)))  # Add to make all indexes of Array >= 0
+for j in range(int(min(final_array)), int(max(final_array)) + 1):
+#for j in range(-20, 20):
+    countCorrect = 0
+    countTotal = 0
+    for i, score in enumerate(final_array):
+        if (int(score) == j):
+            if (score >= 0 and labels_test[i] == 1):
+                countCorrect += 1
+            elif (score < 0 and labels_test[i] == 0):
+                countCorrect += 1
+            countTotal += 1    
 
-#     if j % 5 == 0: accuracy_per_single_score_labels.append(j)  # j mod 5     
-#     if countTotal != 0: accuracy_per_single_score[j + addIndex] = float(countCorrect) / countTotal
+    if j % 5 == 0: accuracy_per_single_score_labels.append(j)  # j mod 5     
+    if countTotal != 0: accuracy_per_single_score[j + addIndex] = float(countCorrect) / countTotal
 
-# #Plot
-# x = np.arange(int(min(final_array)), int(max(final_array)) + 1)
+#Plot
+x = np.arange(int(min(final_array)), int(max(final_array)) + 1)
 
-# fig, ax = plt.subplots()
-# plt.xlabel('Sentiment Score\n\u2190 Strongly Negative | Strongly Positive\u2192')
-# plt.ylabel('Accuracy (%)')
-# plt.title('Emotional Keyword Counting/Spotting Classifier\nAccuracy per individual Score')
-# plt.bar(x, accuracy_per_single_score)
-# #ax.set_xlim([-50,50])
-# ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
-# ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
-# ax.xaxis.set
+fig, ax = plt.subplots()
+plt.xlabel('Sentiment Score\n\u2190 Strongly Negative | Strongly Positive\u2192')
+plt.ylabel('Accuracy (%)')
+plt.title('Emotional Keyword Counting/Spotting Classifier\nAccuracy per individual Score')
+plt.bar(x, accuracy_per_single_score)
+#ax.set_xlim([-50,50])
+ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
+ax.xaxis.set
 
-# #plt.show()
-# ## ^ SHOW ^
+#plt.show()
+## ^ SHOW ^
 
-# for i, score in enumerate(final_array):
-#     if score >= 1:  # Default: 0
-#         final_array[i] = 1
-#     else:
-#         final_array[i] = 0
+for i, score in enumerate(final_array):
+    if score >= 1:  # Default: 0
+        final_array[i] = 1
+    else:
+        final_array[i] = 0
         
-# print('\n- [Model 1] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' // Skew the Decision Boundary (Default: 0) according to the Difference')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
+print('\n- [Model 1] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' // Skew the Decision Boundary (Default: 0) according to the Difference')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
 
-# ## Model 2 on top of Model 1
-# # Get Sentiment Words from our pickled Pos/Neg Opinion Lexicon (Classifier)
-# ids_to_flip_to_Pos = []
-# ids_to_flip_to_Neg = []
-# model2_array = np.zeros(len(data_test))  # Array of the Word Count for each Document
-# countImpact_Pos = countImpact_Neg = 0
+## Model 2 on top of Model 1
+# Get Sentiment Words from our pickled Pos/Neg Opinion Lexicon (Classifier)
+ids_to_flip_to_Pos = []
+ids_to_flip_to_Neg = []
+model2_array = np.zeros(len(data_test))  # Array of the Word Count for each Document
+countImpact_Pos = countImpact_Neg = 0
 
-# # Get the Features from a Pipeline+Union
-# # trained_features = [w[7:] for w in clf.named_steps['union'].get_feature_names()]
+# Get the Features from a Pipeline+Union
+# trained_features = [w[7:] for w in clf.named_steps['union'].get_feature_names()]
 
-# for word in vocabulary:
-#     if clf.predict([word]) == [1]:
-#         for i in range(0, len(data_test)):  # Positive
-#             temp = data_array[i, vocabulary.get(word)]
-#             model2_array[i] += temp
-#             countImpact_Pos += np.sum(temp)
-#     else:
-#         for i in range(0, len(data_test)):  # Negative
-#             temp = data_array[i, vocabulary.get(word)]
-#             model2_array[i] -= temp
-#             countImpact_Neg += np.sum(temp)
+for word in vocabulary:
+    if clf.predict([word]) == [1]:
+        for i in range(0, len(data_test)):  # Positive
+            temp = data_array[i, vocabulary.get(word)]
+            model2_array[i] += temp
+            countImpact_Pos += np.sum(temp)
+    else:
+        for i in range(0, len(data_test)):  # Negative
+            temp = data_array[i, vocabulary.get(word)]
+            model2_array[i] -= temp
+            countImpact_Neg += np.sum(temp)
  
-# # Very high Scores that have to be Flipped to Positives/Negatives
-# for i, score in enumerate(model2_array):
-#     if score >= -25:
-#         ids_to_flip_to_Pos.append(i)
-#     elif score <= -65:
-#         ids_to_flip_to_Neg.append(i)
+# Very high Scores that have to be Flipped to Positives/Negatives
+for i, score in enumerate(model2_array):
+    if score >= -25:
+        ids_to_flip_to_Pos.append(i)
+    elif score <= -65:
+        ids_to_flip_to_Neg.append(i)
 
-# for i in ids_to_flip_to_Pos:
-#     if final_array[i] == 0:
-#         final_array[i] = 1
-# for i in ids_to_flip_to_Neg:
-#     if final_array[i] == 1:
-#         final_array[i] = 0
+for i in ids_to_flip_to_Pos:
+    if final_array[i] == 0:
+        final_array[i] = 1
+for i in ids_to_flip_to_Neg:
+    if final_array[i] == 1:
+        final_array[i] = 0
 
-# print('\n- [Model 2] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' //')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
+print('\n- [Model 2] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' //')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
 
-# Print_Result_Metrics(labels_test, final_array, dataset.target_names)  
-
-
-### LET'S BUILD : Word Spotting and Counting using SentiWordNet and Word-sense disambiguation
-
-#SentiWordNet
-#n - NOUN
-#v - VERB
-#a - ADJECTIVE
-#s - ADJECTIVE SATELLITE
-#r - ADVERB 
-
-def Find_WordNet_Path_Disamb(word, tokenized_sentence):
-    '''    Disambiguate the meaning of a Word by checking Path Similarities    '''
-    while word in tokenized_sentence: tokenized_sentence.remove(word)  # Remove the Word itself from the Sentence  
-    word_synsets = list(wn.synsets(word))
-    maxscore = 0.0
-    maxlabel = None
-
-    for synset in word_synsets:
-        # Debug
-        # print('\nExamining the synset: ', synset)    
-        for i in tokenized_sentence:
-            temp = 0.0
-            temp_synsets = list(wn.synsets(i))
-            for synset2 in temp_synsets:
-                # ! also Leacock-Chodorow Similarity and more alternatives
-                similarity = synset.path_similarity(synset2)
-                if (similarity is not None):
-                    # print('Current word is: ', i, '  Current synset2 is: ', synset2, 'with similarity', similarity)
-                    if (similarity > temp):
-                        temp = similarity
-            if temp > maxscore:
-                maxscore = temp
-                maxlabel = synset
-
-    print(maxscore)
-    return maxlabel
-
-x = 'the river winds through the hills'
-
-y = Find_WordNet_Path_Disamb('winds', word_tokenize(x))
-
-print(swn.senti_synset(y.name()))
-
-
-
-# 3 WAYS TO CHECK THE SYNSET, (1) Predict pos neg with Classifier (2) Check if it is in Opinion Lexicon (3) Just write the bigger number of the 2
-
-#from nltk import pos_tag
-#print(pos_tag(word_tokenize(x)))
-# FINAL STEP, TRY TO TO POSTAGS FOR SPEED
+Print_Result_Metrics(labels_test, final_array, dataset.target_names)  
