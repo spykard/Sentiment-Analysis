@@ -3,8 +3,7 @@ Sentiment Analysis Using Interesting Techniques. Bo Pang and Lillian Lee (ACL 20
 '''
 
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import LinearSVC
@@ -13,18 +12,19 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.feature_extraction.stop_words import ENGLISH_STOP_WORDS
 from sklearn import metrics
 from nltk.corpus import stopwords
+from nltk.corpus import sentiwordnet as swn
 from nltk import word_tokenize
 from nltk.stem import WordNetLemmatizer
-import numpy as np
-import copy
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 from sklearn.datasets import load_files
 from sklearn.externals import joblib
 from re import sub
+import numpy as np
 import string
-import os
+import copy
 
 def Run_Classifier(data_train, data_test, labels_train, labels_test, targetnames, stopwords_complete_lemmatized, pickle_enable):
     '''    Run Classifier to be used as an Opinion Pos/Neg Lexicon (List of Positive and Negative Words)    '''
@@ -106,6 +106,19 @@ def Print_Result_Metrics(labels_test, predicted, targetnames):
     print(metrics.classification_report(labels_test, predicted, target_names=targetnames))
     print(metrics.confusion_matrix(labels_test, predicted))
 
+def SentiWordNet_Check_Similarity(wordA, wordB):
+    wordA_synsets = list(swn.senti_synsets(wordA))
+    wordB_synsets = list(swn.senti_synsets(wordB))
+    maxscore = 0
+
+    for i in wordA_synsets:
+        for j in wordB_synsets:
+            temp = swn.path_similarity(i, j)
+            if temp > 0:
+                if temp > maxscore:
+                    maxscore = temp
+    return maxscore
+
 class LemmaTokenizer(object):
     '''    Override SciKit's default Tokenizer    '''
     def __init__(self):
@@ -133,30 +146,10 @@ np.set_printoptions(precision=10)  # Numpy Precision when Printing
 # Split, X and y are pairs: data & labels
 data_train, data_test, labels_train, labels_test = train_test_split(dataset.data, dataset.target, test_size=0.30, random_state=22)
 
-# Build
+# Create
 # Run_Classifier(data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, 1)
 # or Load
 clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords.pkl')
-
-
-### LET'S BUILD : SentiWordNet - Counting/Spotting Sentimental Words
-
-#SentiWordNet
-#n - NOUN
-#v - VERB
-#a - ADJECTIVE
-#s - ADJECTIVE SATELLITE
-#r - ADVERB 
-
-### 1. Bing Liu Word Counting
-### 2. Custom Trained Naive Bayes Bag of Words, Word Counting
-
-### 3. Bing Liu SentiWordNet Counting
-### 4. CUsom Trained Bag of Words, Word Counting
-
-# two ways to SentiWordNet, with or without Word Disambiguation
-
-# IF I GO FOR 2nGRAMS MIN MAX LIMITS NEED TO BE VERY LIGHT SAME FOR STOPWORDS
 
 
 ### LET'S BUILD : Word Spotting and Counting using Opinion Lexicon
@@ -276,3 +269,17 @@ for i in ids_to_flip_to_Neg:
 print('\n- [Model 2] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' //')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
 
 Print_Result_Metrics(labels_test, final_array, dataset.target_names)  
+
+
+### LET'S BUILD : Word Spotting and Counting using SentiWordNet and Word-sense disambiguation
+
+
+#SentiWordNet
+#n - NOUN
+#v - VERB
+#a - ADJECTIVE
+#s - ADJECTIVE SATELLITE
+#r - ADVERB 
+
+
+# two ways to SentiWordNet, with or without Word Disambiguation
