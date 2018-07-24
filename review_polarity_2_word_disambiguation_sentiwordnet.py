@@ -14,7 +14,7 @@ from sklearn import metrics
 from nltk.corpus import stopwords
 from nltk.corpus import wordnet as wn
 from nltk.corpus import sentiwordnet as swn
-from nltk import word_tokenize, sent_tokenize
+from nltk import word_tokenize, sent_tokenize, pos_tag
 from nltk.stem import WordNetLemmatizer
 
 import matplotlib.pyplot as plt
@@ -140,135 +140,18 @@ data_train, data_test, labels_train, labels_test = train_test_split(dataset.data
 clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords.pkl')
 
 
-# ### LET'S BUILD : Word Spotting and Counting using Opinion Lexicon
+### LET'S BUILD : Word Spotting and Counting using SentiWordNet and Word-Sense disambiguation
 
-# ## Model 1
-# # Get Sentiment Words from a generic Opinion Lexicon
-# pos_words = []
-# neg_words = []
-# for line in open('./opinion_lexicon/positive-words.txt', 'r'):
-#     pos_words.append(line.rstrip())  # Must strip Newlines
+### Model 1
+# Get Sentiment Words from a generic Opinion Lexicon and/or from our pickled Pos/Neg Classifier (Opinion Lexicon)
+# For each sentence run a word disambiguation in WordNet then get the sentiment of it's meaning through SentiWordNet
 
-# for line in open('./opinion_lexicon/negative-words.txt', 'r'):
-#     neg_words.append(line.rstrip())  # Must strip Newlines  
-
-# count_vect = CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
-# data_test_counts = count_vect.fit_transform(data_test)
-
-# data_array = data_test_counts.toarray()
-# vocabulary = count_vect.vocabulary_
-# final_array = np.zeros(len(data_test))  # Array of the Score for each Document
-# countImpact_Pos = countImpact_Neg = 0
-
-# for word in pos_words:  # For each Sentimental Word update the Array
-#     if word in vocabulary:
-#         for i in range(0, len(data_test)):
-#             temp = data_array[i, vocabulary.get(word)]
-#             final_array[i] += temp
-#             countImpact_Pos += np.sum(temp)
-
-# for word in neg_words:  # For each Sentimental Word update the Array
-#     if word in vocabulary:
-#         for i in range(0, len(data_test)):
-#             temp = data_array[i, vocabulary.get(word)]
-#             final_array[i] -= temp
-#             countImpact_Neg += np.sum(temp)        
-
-# ## Also Count the Accuracy of every Score individually
-# accuracy_per_single_score = np.zeros(int(max(final_array) - min(final_array) + 1.0))  # Number of Individual Scores
-# accuracy_per_single_score_labels = []
-
-# addIndex = int(abs(min(final_array)))  # Add to make all indexes of Array >= 0
-# for j in range(int(min(final_array)), int(max(final_array)) + 1):
-# #for j in range(-20, 20):
-#     countCorrect = 0
-#     countTotal = 0
-#     for i, score in enumerate(final_array):
-#         if (int(score) == j):
-#             if (score >= 0 and labels_test[i] == 1):
-#                 countCorrect += 1
-#             elif (score < 0 and labels_test[i] == 0):
-#                 countCorrect += 1
-#             countTotal += 1    
-
-#     if j % 5 == 0: accuracy_per_single_score_labels.append(j)  # j mod 5     
-#     if countTotal != 0: accuracy_per_single_score[j + addIndex] = float(countCorrect) / countTotal
-
-# #Plot
-# x = np.arange(int(min(final_array)), int(max(final_array)) + 1)
-
-# fig, ax = plt.subplots()
-# plt.xlabel('Sentiment Score\n\u2190 Strongly Negative | Strongly Positive\u2192')
-# plt.ylabel('Accuracy (%)')
-# plt.title('Emotional Keyword Counting/Spotting Classifier\nAccuracy per individual Score')
-# plt.bar(x, accuracy_per_single_score)
-# #ax.set_xlim([-50,50])
-# ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
-# ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
-# ax.xaxis.set
-
-# #plt.show()
-# ## ^ SHOW ^
-
-# for i, score in enumerate(final_array):
-#     if score >= 1:  # Default: 0
-#         final_array[i] = 1
-#     else:
-#         final_array[i] = 0
-        
-# print('\n- [Model 1] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' // Skew the Decision Boundary (Default: 0) according to the Difference')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
-
-# ## Model 2 on top of Model 1
-# # Get Sentiment Words from our pickled Pos/Neg Opinion Lexicon (Classifier)
-# ids_to_flip_to_Pos = []
-# ids_to_flip_to_Neg = []
-# model2_array = np.zeros(len(data_test))  # Array of the Word Count for each Document
-# countImpact_Pos = countImpact_Neg = 0
-
-# # Get the Features from a Pipeline+Union
-# # trained_features = [w[7:] for w in clf.named_steps['union'].get_feature_names()]
-
-# for word in vocabulary:
-#     if clf.predict([word]) == [1]:
-#         for i in range(0, len(data_test)):  # Positive
-#             temp = data_array[i, vocabulary.get(word)]
-#             model2_array[i] += temp
-#             countImpact_Pos += np.sum(temp)
-#     else:
-#         for i in range(0, len(data_test)):  # Negative
-#             temp = data_array[i, vocabulary.get(word)]
-#             model2_array[i] -= temp
-#             countImpact_Neg += np.sum(temp)
- 
-# # Very high Scores that have to be Flipped to Positives/Negatives
-# for i, score in enumerate(model2_array):
-#     if score >= -25:
-#         ids_to_flip_to_Pos.append(i)
-#     elif score <= -65:
-#         ids_to_flip_to_Neg.append(i)
-
-# for i in ids_to_flip_to_Pos:
-#     if final_array[i] == 0:
-#         final_array[i] = 1
-# for i in ids_to_flip_to_Neg:
-#     if final_array[i] == 1:
-#         final_array[i] = 0
-
-# print('\n- [Model 2] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' //')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
-
-# Print_Result_Metrics(labels_test, final_array, dataset.target_names)  
-
-
-### LET'S BUILD : Word Spotting and Counting using SentiWordNet and Word-sense disambiguation
-
-#SentiWordNet
-#n - NOUN
-#v - VERB
-#a - ADJECTIVE
-#s - ADJECTIVE SATELLITE
-#r - ADVERB 
-from nltk import pos_tag
 def NLTK_to_Wordnet_PoS(tag):
+    #n - Noun
+    #v - Verb
+    #a - Adjective
+    #s - Adjective Satellite
+    #r - Adverb 
     if tag.startswith('NN'):
         return wn.NOUN
     elif tag.startswith('VB'):
@@ -278,29 +161,33 @@ def NLTK_to_Wordnet_PoS(tag):
     elif tag.startswith('RB'):
         return wn.ADV
     else:
-        return None  # None to get all Synsets, Empty String to get no Synsets
+        return None  # None: will return all Synsets | '': will return no Synsets
 
-
-def Find_WordNet_Path_Disamb(word, lemma, lemma_pos, tokenized_sentence):
+def Find_WordNet_Path_Disamb(word, lemma, lemma_pos, tokenized_sentence, pos_tags_enable):
     '''    Disambiguate the meaning of a Word by checking Path Similarities    '''
     while word in tokenized_sentence: tokenized_sentence.remove(word)  # Remove the Word itself from Comparisons 
 
-    #[item for item in a if item != 333]
+    # Using PoS Tags is much Faster but reduces Accuracy
+    if pos_tags_enable == 1:
+        word_synsets = list(wn.synsets(lemma, NLTK_to_Wordnet_PoS(lemma_pos)))
+    else:
+        word_synsets = list(wn.synsets(lemma))
 
-    word_synsets = list(wn.synsets(lemma, NLTK_to_Wordnet_PoS(lemma_pos)))
     maxscore = 0.0
     maxlabel = None
     sentence_pos = pos_tag(tokenized_sentence)
-    #print(sentence_pos[0][1])
 
     for synset in word_synsets:
         # Debug
         # print('\nExamining the synset: ', synset)    
         for i, word_t in enumerate(tokenized_sentence):
             temp = 0.0
-            temp_synsets = list(wn.synsets(word_t, NLTK_to_Wordnet_PoS(sentence_pos[i][1])))
+            if pos_tags_enable == 1: 
+                temp_synsets = list(wn.synsets(word_t, NLTK_to_Wordnet_PoS(sentence_pos[i][1])))
+            else:
+                temp_synsets = list(wn.synsets(word_t))
+
             for synset2 in temp_synsets:
-                # ! also Leacock-Chodorow Similarity and more alternatives
                 similarity = synset.path_similarity(synset2)
                 if (similarity is not None):
                     # Debug
@@ -310,17 +197,9 @@ def Find_WordNet_Path_Disamb(word, lemma, lemma_pos, tokenized_sentence):
             if temp > maxscore:
                 maxscore = temp
                 maxlabel = synset
-
-    # Debug
-    # print(lemma, maxlabel)
     return maxlabel
 
-# for i, score in enumerate(final_array):
-#     if score >= -1.5:  # Default: 0
-#         final_array[i] = 1
-#     else:
-#         final_array[i] = 0
-
+# Get Sentiment Words from a generic Opinion Lexicon
 pos_words = []
 neg_words = []
 for line in open('./opinion_lexicon/positive-words.txt', 'r'):
@@ -329,17 +208,19 @@ for line in open('./opinion_lexicon/positive-words.txt', 'r'):
 for line in open('./opinion_lexicon/negative-words.txt', 'r'):
     neg_words.append(line.rstrip())  # Must strip Newlines  
 
+
 final_array = np.zeros(len(data_test))  # Array of the Score for each Document
+countImpact_Pos = countImpact_Neg = 0
 translator = str.maketrans('','', sub('\'', '', string.punctuation))
 
-for i, doc in enumerate(data_test[0:100]):
+for i, doc in enumerate(data_test):
     ## Preprocessing
     # Convert form Byte to UTF, remove Newlines and Split Sentences
     scorePos = scoreNeg = 0.0
     split_sentences = sent_tokenize(str(doc, 'utf-8').replace('\n', ''))
 
     for sentence in split_sentences:
-        # Correct but much Slower
+        # Correct Preprocessing but much Slower
         # tokenized_sentence = []
         # for t in word_tokenize(sentence):
         #    x = t.translate(translator) 
@@ -347,51 +228,82 @@ for i, doc in enumerate(data_test[0:100]):
         tokenized_sentence = word_tokenize(sentence)
 
         for j, word in enumerate(tokenized_sentence):
-            # Lemmatizing etc.
+            # Faster
             x = word.translate(translator) 
             if x != '': 
                 lemmatized = wnl.lemmatize(x.lower())
             else:
                 continue
             if lemmatized in stopwords_complete_lemmatized: continue
-        ##
-            if ((lemmatized in pos_words) or (lemmatized in neg_words)):  # 0.02 Worse but Faster
-                disambiguate = Find_WordNet_Path_Disamb(word, lemmatized, pos_tag(tokenized_sentence)[j][1], tokenized_sentence)
+    ##
+
+            if ((lemmatized in pos_words) or (lemmatized in neg_words)):  # Faster at the cost of 0.02 Accuracy
+                disambiguate = Find_WordNet_Path_Disamb(word, lemmatized, pos_tag(tokenized_sentence)[j][1], tokenized_sentence, 0)
                 if disambiguate is not None:
-                    #if word in pos_words:
                     if clf.predict([word]) == [1]:  # Positive
                         scorePos += swn.senti_synset(disambiguate.name()).pos_score()
                     else:                           # Negative
-                    #if word in neg_words:
                         scoreNeg += swn.senti_synset(disambiguate.name()).neg_score()
+                    #if lemmatized in pos_words:
+                    #if lemmatized in neg_words:
 
-
-    #final_array[i] += scorePos
-    #final_array[i] -= scoreNeg
-    if (scorePos - scoreNeg >= -1.0):  # Default: 0
-        # print('We are currently on i: ', i, 'Assigned as: 1')
+    countImpact_Pos += scorePos
+    countImpact_Neg += scoreNeg
+    if (scorePos - scoreNeg >= -0.9):  # Default: 0
         final_array[i] = 1
     else:
-        # print('We are currently on i: ', i, 'Assigned as: 0')
         final_array[i] = 0
-    print(final_array[i], labels_test[i], ' | Score: ', scorePos - scoreNeg)
-    
-Print_Result_Metrics(labels_test[0:100], final_array[0:100], dataset.target_names)  
+    # Debug
+    # print(final_array[i], labels_test[i], ' | Score: ', scorePos - scoreNeg)
+
+print('\n- [Model 1] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' // Skew the Decision Boundary (Default: 0) according to the Difference')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
+###
 
 
+### Model 2 on top of Model 1
+# Get Sentiment Words from our pickled Pos/Neg Opinion Lexicon (Classifier)
+# Flip the Polarity of confident (extreme) cases
+ids_to_flip_to_Pos = []
+ids_to_flip_to_Neg = []
+model2_array = np.zeros(len(data_test))  # Array of the Word Count for each Document
+countImpact_Pos = countImpact_Neg = 0
 
+# Get the Features from a Pipeline+Union
+# trained_features = [w[7:] for w in clf.named_steps['union'].get_feature_names()]
 
+count_vect = CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
+data_test_counts = count_vect.fit_transform(data_test)
 
-#x = 'the river winds through the hills'
+data_array = data_test_counts.toarray()
+vocabulary = count_vect.vocabulary_
 
+for word in vocabulary:
+    if clf.predict([word]) == [1]:
+        for i in range(0, len(data_test)):  # Positive
+            temp = data_array[i, vocabulary.get(word)]
+            model2_array[i] += temp
+            countImpact_Pos += np.sum(temp)
+    else:
+        for i in range(0, len(data_test)):  # Negative
+            temp = data_array[i, vocabulary.get(word)]
+            model2_array[i] -= temp
+            countImpact_Neg += np.sum(temp)
+ 
+# Very high Scores that have to be Flipped to Positives/Negatives
+for i, score in enumerate(model2_array):
+    if score >= -25:
+        ids_to_flip_to_Pos.append(i)
+    elif score <= -65:
+        ids_to_flip_to_Neg.append(i)
 
-# 3 WAYS TO CHECK THE SYNSET, (1) Predict pos neg with Classifier (2) Check if it is in Opinion Lexicon (3) Just write the bigger number of the 2
+for i in ids_to_flip_to_Pos:
+    if final_array[i] == 0:
+        final_array[i] = 1
+for i in ids_to_flip_to_Neg:
+    if final_array[i] == 1:
+        final_array[i] = 0
 
-#from nltk import pos_tag
+print('\n- [Model 2] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' //')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
+###
 
-#x = word_tokenize(x)
-#print(pos_tag(x))
-#y = Find_WordNet_Path_Disamb('winds', word_tokenize(x), pos_tags)
-#print(list(swn.senti_synsets('slow')))
-
-# FINAL STEP, TRY TO TO POSTAGS FOR SPEED
+Print_Result_Metrics(labels_test, final_array, dataset.target_names)  
