@@ -222,6 +222,7 @@ print('\n- [Model 1] Impact of Positive Words:', countImpact_Pos, '| Impact of N
 
 ### Model 2 on top of Model 1
 # Get Sentiment Words from our pickled Pos/Neg Classifier (Opinion Lexicon)
+# Flip the Polarity of confident (extreme) cases
 ids_to_flip_to_Pos = []
 ids_to_flip_to_Neg = []
 model2_array = np.zeros(len(data_test))  # Array of the Word Count for each Document
