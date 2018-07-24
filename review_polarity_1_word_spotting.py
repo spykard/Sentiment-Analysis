@@ -142,7 +142,7 @@ clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords.pkl')
 
 ### LET'S BUILD : Word Spotting and Counting using Opinion Lexicon
 
-## Model 1
+### Model 1
 # Get Sentiment Words from a generic Opinion Lexicon
 pos_words = []
 neg_words = []
@@ -217,8 +217,10 @@ for i, score in enumerate(final_array):
         final_array[i] = 0
         
 print('\n- [Model 1] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' // Skew the Decision Boundary (Default: 0) according to the Difference')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
+###
 
-## Model 2 on top of Model 1
+
+### Model 2 on top of Model 1
 # Get Sentiment Words from our pickled Pos/Neg Opinion Lexicon (Classifier)
 ids_to_flip_to_Pos = []
 ids_to_flip_to_Neg = []
@@ -255,5 +257,6 @@ for i in ids_to_flip_to_Neg:
         final_array[i] = 0
 
 print('\n- [Model 2] Impact of Positive Words:', countImpact_Pos, '| Impact of Negative Words:', countImpact_Neg, ' //')  # A word is considered Positive if it's score was bigger than 0. Depending on the Impact Difference other numbers are chosen instead of 0
+###
 
 Print_Result_Metrics(labels_test, final_array, dataset.target_names)  
