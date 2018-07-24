@@ -140,7 +140,7 @@ data_train, data_test, labels_train, labels_test = train_test_split(dataset.data
 clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords.pkl')
 
 
-### LET'S BUILD : Word Spotting and Counting using SentiWordNet and Word-Sense disambiguation
+### LET'S BUILD : Word Spotting and Counting using SentiWordNet and Word-Sense Disambiguation
 
 ### Model 1
 # Get Sentiment Words from a generic Opinion Lexicon and/or from our pickled Pos/Neg Classifier (Opinion Lexicon)
@@ -182,6 +182,7 @@ def Find_WordNet_Path_Disamb(word, lemma, lemma_pos, tokenized_sentence, pos_tag
         # print('\nExamining the synset: ', synset)    
         for i, word_t in enumerate(tokenized_sentence):
             temp = 0.0
+            if word_t in string.punctuation: continue  # Quick Fix because of the Fast Preprocessing that didn't remove Punctuation
             if pos_tags_enable == 1: 
                 temp_synsets = list(wn.synsets(word_t, NLTK_to_Wordnet_PoS(sentence_pos[i][1])))
             else:
@@ -244,6 +245,7 @@ for i, doc in enumerate(data_test):
                         scorePos += swn.senti_synset(disambiguate.name()).pos_score()
                     else:                           # Negative
                         scoreNeg += swn.senti_synset(disambiguate.name()).neg_score()
+                    # Alternative Way    
                     #if lemmatized in pos_words:
                     #if lemmatized in neg_words:
 
