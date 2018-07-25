@@ -129,6 +129,7 @@ class LemmaTokenizer(object):
         
         return temp
 
+
 ### PREPROCESSING
 dataset = load_files('./datasets/review_polarity/txt_sentoken', shuffle=False)
 
