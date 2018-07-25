@@ -121,90 +121,129 @@ pipeline = Pipeline([
                     ('clf', MultinomialNB()),])  
 
 parameters = {'tfidf__use_idf': [True],
-            'union__transformer_weights': [{'vect1':1.0, 'vect2':1.0},],
-            'union__vect1__max_df': [0.90, 0.80, 0.70],
-            'union__vect1__min_df': [5, 8],
-            'union__vect1__ngram_range': [(1, 1)],              
-            'union__vect1__stop_words': [stopwords.words("english"), 'english', stopwords_complete_lemmatized],
-            'union__vect1__strip_accents': ['unicode'],
-            'union__vect1__tokenizer': [LemmaTokenizer()],
-            'union__vect2__max_df': [0.95, 0.85, 0.75],
-            'union__vect2__min_df': [5, 8],
-            'union__vect2__ngram_range': [(2, 2)],              
-            'union__vect2__stop_words': [stopwords_complete_lemmatized, None],
-            'union__vect2__strip_accents': ['unicode'],
-            'union__vect2__tokenizer': [LemmaTokenizer()],} 
+              'union__transformer_weights': [{'vect1':1.0, 'vect2':1.0},],
+              'union__vect1__max_df': [0.90, 0.80, 0.70],
+              'union__vect1__min_df': [5, 8],  # 5 meaning 5 documents
+              'union__vect1__ngram_range': [(1, 1)],              
+              'union__vect1__stop_words': [stopwords.words("english"), 'english', stopwords_complete_lemmatized],
+              'union__vect1__strip_accents': ['unicode'],
+              'union__vect1__tokenizer': [LemmaTokenizer()],
+              'union__vect2__max_df': [0.95, 0.85, 0.75],
+              'union__vect2__min_df': [5, 8],
+              'union__vect2__ngram_range': [(2, 2)],              
+              'union__vect2__stop_words': [stopwords_complete_lemmatized, None],
+              'union__vect2__strip_accents': ['unicode'],
+              'union__vect2__tokenizer': [LemmaTokenizer()],} 
 
-Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
 
 # Grid Search Off
+pipeline = Pipeline([ # Optimal
+                    ('union', FeatureUnion(transformer_list=[      
+                        ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
+                        ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
 
-# Optimal
-parameters = {'tfidf__use_idf': [True],
-              'vect__max_df': [0.80],
-              'vect__min_df': [5],
-              'vect__ngram_range': [(1, 1)],              
-              'vect__stop_words': [stopwords_complete_lemmatized],
-              'vect__strip_accents': ['unicode'],
-              'vect__tokenizer': [LemmaTokenizer()],}
+                        transformer_weights={
+                            'vect1': 1.0,
+                            'vect2': 1.0,},
+                    )),
 
-Run_Classifier(0, 0, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                    ('clf', MultinomialNB()),])  
 
-
-
-
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
 ###
 
 
 ### LET'S BUILD : SGDC-SVM
-pipeline2 = Pipeline([('vect', CountVectorizer()),
-                      ('tfidf', TfidfTransformer()),
-                      ('clf', SGDClassifier(loss='hinge', penalty='l2', max_iter=1000, tol=None, n_jobs=-1)),])
 
-# parameters = {'clf__alpha': [1e-4, 1e-3, 1e-2],
-#               'tfidf__use_idf': (True, False),
-#               'vect__max_df': [0.95, 0.85, 0.80],
-#               'vect__min_df': [5],  # 5 meaning 5 documents
-#               'vect__ngram_range': [(1, 1), (1, 2)],              
-#               'vect__stop_words': [stopwords.words("english"), 'english', stopwords_complete, stopwords_complete_lemmatized],  # NLTK Stopwords, SciKit Stopwords
-#               'vect__strip_accents': ['unicode', None],
-#               'vect__tokenizer': [LemmaTokenizer(), None],}
+# Grid Search On
+pipeline = Pipeline([
+                    ('union', FeatureUnion(transformer_list=[      
+                        ('vect1', CountVectorizer()),  # 1-Grams Vectorizer
+                        ('vect2', CountVectorizer()),],  # 2-Grams Vectorizer
+                    )),
+                    ('tfidf', TfidfTransformer()),
+                    ('clf', SGDClassifier(loss='hinge', penalty='l2', max_iter=1000, tol=None, n_jobs=-1)),]) 
 
-# Optimal
-parameters = {'clf__alpha': [1e-3],
+parameters = {'clf__alpha': [1e-4, 1e-3, 1e-2],
               'tfidf__use_idf': [True],
-              'vect__max_df': [0.80],
-              'vect__min_df': [5],
-              'vect__ngram_range': [(1, 1)],              
-              'vect__stop_words': [stopwords_complete_lemmatized],
-              'vect__strip_accents': ['unicode'],
-              'vect__tokenizer': [LemmaTokenizer()],}
+              'union__transformer_weights': [{'vect1':1.0, 'vect2':1.0},],
+              'union__vect1__max_df': [0.90, 0.80, 0.70],
+              'union__vect1__min_df': [5, 8],  # 5 meaning 5 documents
+              'union__vect1__ngram_range': [(1, 1)],              
+              'union__vect1__stop_words': [stopwords.words("english"), 'english', stopwords_complete_lemmatized],
+              'union__vect1__strip_accents': ['unicode'],
+              'union__vect1__tokenizer': [LemmaTokenizer()],
+              'union__vect2__max_df': [0.95, 0.85, 0.75],
+              'union__vect2__min_df': [5, 8],
+              'union__vect2__ngram_range': [(2, 2)],              
+              'union__vect2__stop_words': [stopwords_complete_lemmatized, None],
+              'union__vect2__strip_accents': ['unicode'],
+              'union__vect2__tokenizer': [LemmaTokenizer()],} 
 
-#Run_Classifier(pipeline2, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, 0)
+#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+
+# Grid Search Off
+pipeline = Pipeline([ # Optimal
+                    ('union', FeatureUnion(transformer_list=[      
+                        ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
+                        ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
+
+                        transformer_weights={
+                            'vect1': 1.0,
+                            'vect2': 1.0,},
+                    )),
+
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                    ('clf', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=1000, tol=None, n_jobs=-1)),]) 
+
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+###
 
 
-## LET'S BUILD : SVM
-pipeline3 = Pipeline([('vect', CountVectorizer()),
-                      ('tfidf', TfidfTransformer()),
-                      ('clf', LinearSVC(loss='hinge', penalty='l2', max_iter=1000, dual=True)),]) # dual for Text Classification
+### LET'S BUILD : SVM
 
-# parameters = {'clf__C': [1, 500, 1000],
-#               'tfidf__use_idf': (True, False),
-#               'vect__max_df': [0.95, 0.85, 0.80],
-#               'vect__min_df': [5],  # 5 meaning 5 documents
-#               'vect__ngram_range': [(1, 1), (1, 2)],              
-#               'vect__stop_words': [stopwords.words("english"), 'english', stopwords_complete, stopwords_complete_lemmatized],  # NLTK Stopwords, SciKit Stopwords
-#               'vect__strip_accents': ['unicode', None],
-#               'vect__tokenizer': [LemmaTokenizer(), None],}
+# Grid Search On
+pipeline = Pipeline([
+                    ('union', FeatureUnion(transformer_list=[      
+                        ('vect1', CountVectorizer()),  # 1-Grams Vectorizer
+                        ('vect2', CountVectorizer()),],  # 2-Grams Vectorizer
+                    )),
+                    ('tfidf', TfidfTransformer()),
+                    ('clf', LinearSVC(loss='hinge', penalty='l2', max_iter=1000, dual=True)),])  # dual: True for Text/High Feature Count
 
-# Optimal
-parameters = {'clf__C': [500],
+parameters = {'clf__C': [1, 500, 1000],
               'tfidf__use_idf': [True],
-              'vect__max_df': [0.80],
-              'vect__min_df': [5],
-              'vect__ngram_range': [(1, 1)],              
-              'vect__stop_words': [stopwords_complete_lemmatized],
-              'vect__strip_accents': ['unicode'],
-              'vect__tokenizer': [LemmaTokenizer()],}
+              'union__transformer_weights': [{'vect1':1.0, 'vect2':1.0},],
+              'union__vect1__max_df': [0.90, 0.80, 0.70],
+              'union__vect1__min_df': [5, 8],  # 5 meaning 5 documents
+              'union__vect1__ngram_range': [(1, 1)],              
+              'union__vect1__stop_words': [stopwords.words("english"), 'english', stopwords_complete_lemmatized],
+              'union__vect1__strip_accents': ['unicode'],
+              'union__vect1__tokenizer': [LemmaTokenizer()],
+              'union__vect2__max_df': [0.95, 0.85, 0.75],
+              'union__vect2__min_df': [5, 8],
+              'union__vect2__ngram_range': [(2, 2)],              
+              'union__vect2__stop_words': [stopwords_complete_lemmatized, None],
+              'union__vect2__strip_accents': ['unicode'],
+              'union__vect2__tokenizer': [LemmaTokenizer()],} 
 
-#Run_Classifier(pipeline3, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, 0)
+#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+
+# Grid Search Off
+pipeline = Pipeline([ # Optimal
+                    ('union', FeatureUnion(transformer_list=[      
+                        ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
+                        ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
+
+                        transformer_weights={
+                            'vect1': 1.0,
+                            'vect2': 1.0,},
+                    )),
+
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                    ('clf', LinearSVC(loss='hinge', penalty='l2', max_iter=1000, C=500, dual=True)),])  # dual: True for Text/High Feature Count
+
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+###
