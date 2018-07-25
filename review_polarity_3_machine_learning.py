@@ -161,7 +161,7 @@ pipeline = Pipeline([ # Optimal
                     ('feature_selection', SelectKBest(score_func=chi2, k=7500)),  # Dimensionality Reduction                   
                     ('clf', MultinomialNB()),])  
 
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Naive Bayes)')
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Naive Bayes)')
 ###
 
 
@@ -209,7 +209,7 @@ pipeline = Pipeline([ # Optimal
                     ('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),  # Dimensionality Reduction 
                     ('clf', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=1000, tol=None, n_jobs=-1)),]) 
 
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SGDC-SVM)')
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SGDC-SVM)')
 ###
 
 
@@ -256,7 +256,7 @@ pipeline = Pipeline([ # Optimal
                     ('tfidf', TfidfTransformer(use_idf=True)),
                     ('clf', LinearSVC(loss='hinge', penalty='l2', max_iter=1000, C=500, dual=True)),])  # dual: True for Text/High Feature Count
 
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SVM)')
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SVM)')
 ###
 
 
@@ -301,9 +301,7 @@ pipeline = Pipeline([ # Optimal
                     )),
 
                     ('tfidf', TfidfTransformer(use_idf=True)),
-                    #('feature_selection', TruncatedSVD(n_components=2000)),
-                    ('feature_selection', SelectKBest(score_func=chi2, k=4100)),  # Dimensionality Reduction
-                    #('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='1.4*mean')),  # Dimensionality Reduction
+                    ('feature_selection', SelectKBest(score_func=chi2, k=5000)),  # Dimensionality Reduction
                     ('clf', LogisticRegression(penalty='l2', max_iter=1000, C=500, dual=True)),])  # dual: True for Text/High Feature Count
 
 Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Logistic Regression)')
