@@ -8,6 +8,7 @@ from sklearn.feature_extraction.stop_words import ENGLISH_STOP_WORDS
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier, LogisticRegression
 from sklearn.svm import LinearSVC
+from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.model_selection import GridSearchCV
 from sklearn.feature_selection import SelectFromModel, SelectKBest, chi2
@@ -46,10 +47,11 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
         print('\n- - - - - DETAILS - - - - -')
         for i in range(len(grid_go.cv_results_['params'])):
             results_noStopWords = copy.deepcopy(grid_go.cv_results_['params'][i])
-            if results_noStopWords['union__vect1__stop_words'] is not None:  # Don't Print the list of Stopwords
-                results_noStopWords['union__vect1__stop_words'] = ['ListOfStopWords']   
-            if results_noStopWords['union__vect2__stop_words'] is not None:
-                results_noStopWords['union__vect2__stop_words'] = ['ListOfStopWords']           
+            if model_name != '(MultiLayer Perceptron)':
+                if results_noStopWords['union__vect1__stop_words'] is not None:  # Don't Print the list of Stopwords
+                    results_noStopWords['union__vect1__stop_words'] = ['ListOfStopWords']   
+                if results_noStopWords['union__vect2__stop_words'] is not None:
+                    results_noStopWords['union__vect2__stop_words'] = ['ListOfStopWords']           
             print(i, 'params - %s; mean - %0.10f; std - %0.10f'
                         % (results_noStopWords.values(),
                         grid_go.cv_results_['mean_test_score'][i],
@@ -66,7 +68,7 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
 
         # (1) TRAIN
         pipeline.fit(data_train, labels_train)
-        print('\nNumber of Features/Dimension is:', pipeline.named_steps['clf'].coef_.shape[1])
+        if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['clf'].coef_.shape[1])
 
         # (2) Model Persistence (Pickle)
         if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/Classifier.pkl') 
@@ -116,6 +118,30 @@ data_train, data_test, labels_train, labels_test = train_test_split(dataset.data
 #   (2) ('feature_selection', TruncatedSVD(n_components=1000)),
 #   (3) ('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),
 #   (4) ('feature_selection', SelectFromModel(estimator=LinearSVC(penalty='l1', dual=False), threshold='mean')),  # Technically L1 is better than L2
+
+
+### LET'S BUILD : MultiLayer Perceptron
+
+# Grid Search On
+pipeline = Pipeline([
+                    ('union', FeatureUnion(transformer_list=[      
+                        ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
+                        ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
+
+                        transformer_weights={
+                            'vect1': 1.0,
+                            'vect2': 1.0,},
+                    )),
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                    ('feature_selection', SelectKBest(score_func=chi2, k=3000)),  # Dimensionality Reduction 
+                    ('clf', MLPClassifier()),])  
+
+parameters = {'clf__hidden_layer_sizes': [(50,)],
+              'clf__max_iter': [500],}
+
+
+Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
+quit()
 
 
 ### LET'S BUILD : Naive Bayes
