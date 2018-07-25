@@ -37,9 +37,9 @@ def Run_Classifier(grid_search_enable, pickle_enable, data_train, data_test, lab
                                 ('vect1', CountVectorizer()),  # 1-Grams Vectorizer
                                 ('vect2', CountVectorizer()),],  # 2-Grams Vectorizer
                             )),
-
                             ('tfidf', TfidfTransformer()),
                             ('clf', MultinomialNB()),])       
+
         parameters = {'tfidf__use_idf': [True],
                     'union__transformer_weights': [{'vect1':1.0, 'vect2':1.0},],
                     'union__vect1__max_df': [0.90, 0.80, 0.70],
@@ -143,10 +143,10 @@ np.set_printoptions(precision=10)  # Numpy Precision when Printing
 data_train, data_test, labels_train, labels_test = train_test_split(dataset.data, dataset.target, test_size=0.30, random_state=22)
 
 # Create
-#Run_Classifier(0, 1, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+Run_Classifier(0, 0, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
 # or Load
 clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords.pkl')
-
+quit()
 
 ### LET'S BUILD : Word Spotting and Counting using Opinion Lexicon
 
