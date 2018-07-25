@@ -37,9 +37,9 @@ def Run_Classifier(grid_search_enable, pickle_enable, data_train, data_test, lab
                                 ('vect1', CountVectorizer()),  # 1-Grams Vectorizer
                                 ('vect2', CountVectorizer()),],  # 2-Grams Vectorizer
                             )),
-
                             ('tfidf', TfidfTransformer()),
-                            ('clf', MultinomialNB()),])       
+                            ('clf', MultinomialNB()),])    
+                               
         parameters = {'tfidf__use_idf': [True],
                     'union__transformer_weights': [{'vect1':1.0, 'vect2':1.0},],
                     'union__vect1__max_df': [0.90, 0.80, 0.70],
