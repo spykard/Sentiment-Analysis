@@ -29,7 +29,7 @@ import numpy as np
 import string
 import copy
 
-def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data_train, data_test, labels_train, labels_test, targetnames, stopwords_complete_lemmatized):
+def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data_train, data_test, labels_train, labels_test, targetnames, stopwords_complete_lemmatized, model_name):
     '''    Run Classifier with or without Grid Search after Preprocessing is done    '''
 
     ## PREPARE ON - Grid Search to Look for the Best Parameters
@@ -66,6 +66,7 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
 
         # (1) TRAIN
         pipeline.fit(data_train, labels_train)
+        print('\nNumber of Features/Dimension is:', pipeline.named_steps['clf'].coef_.shape[1])
 
         # (2) Model Persistence (Pickle)
         if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/Classifier.pkl') 
@@ -73,11 +74,11 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
         # (3) PREDICT
         predicted = pipeline.predict(data_test)
 
-    Print_Result_Metrics(labels_test, predicted, targetnames)  
+    Print_Result_Metrics(labels_test, predicted, targetnames, model_name)  
 
-def Print_Result_Metrics(labels_test, predicted, targetnames):
+def Print_Result_Metrics(labels_test, predicted, targetnames, model_name):
     '''    Print Metrics after Training etc.    '''
-    print('\n- - - - - RESULT METRICS - - - - -')
+    print('\n- - - - - RESULT METRICS', model_name, '- - - - -')
     print('Exact Accuracy: ', metrics.accuracy_score(labels_test, predicted))
     print(metrics.classification_report(labels_test, predicted, target_names=targetnames))
     print(metrics.confusion_matrix(labels_test, predicted))
@@ -112,12 +113,12 @@ data_train, data_test, labels_train, labels_test = train_test_split(dataset.data
 
 # Dimensionality Reduction - 4 different ways to pick the best Features 
 #   (1) ('feature_selection', SelectKBest(score_func=chi2, k=7500)),                    
-#   (2) ('feature_selection', TruncatedSVD(n_components=7500)),
+#   (2) ('feature_selection', TruncatedSVD(n_components=1000)),
 #   (3) ('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),
 #   (4) ('feature_selection', SelectFromModel(estimator=LinearSVC(penalty='l1', dual=False), threshold='mean')),  # Technically L1 is better than L2
 
 
-### LET'S BUILD : NaiveBayes
+### LET'S BUILD : Naive Bayes
 
 # Grid Search On
 pipeline = Pipeline([
@@ -143,7 +144,7 @@ parameters = {'tfidf__use_idf': [True],
               'union__vect2__strip_accents': ['unicode'],
               'union__vect2__tokenizer': [LemmaTokenizer()],} 
 
-#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Naive Bayes)')
 
 # Grid Search Off
 pipeline = Pipeline([ # Optimal
@@ -160,7 +161,7 @@ pipeline = Pipeline([ # Optimal
                     ('feature_selection', SelectKBest(score_func=chi2, k=7500)),  # Dimensionality Reduction                   
                     ('clf', MultinomialNB()),])  
 
-Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Naive Bayes)')
 ###
 
 
@@ -191,7 +192,7 @@ parameters = {'clf__alpha': [1e-4, 1e-3, 1e-2],
               'union__vect2__strip_accents': ['unicode'],
               'union__vect2__tokenizer': [LemmaTokenizer()],} 
 
-#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SGDC-SVM)')
 
 # Grid Search Off
 pipeline = Pipeline([ # Optimal
@@ -205,9 +206,10 @@ pipeline = Pipeline([ # Optimal
                     )),
 
                     ('tfidf', TfidfTransformer(use_idf=True)),
+                    ('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),  # Dimensionality Reduction 
                     ('clf', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=1000, tol=None, n_jobs=-1)),]) 
 
-Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SGDC-SVM)')
 ###
 
 
@@ -238,7 +240,7 @@ parameters = {'clf__C': [1, 500, 1000],
               'union__vect2__strip_accents': ['unicode'],
               'union__vect2__tokenizer': [LemmaTokenizer()],} 
 
-#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SVM)')
 
 # Grid Search Off
 pipeline = Pipeline([ # Optimal
@@ -254,7 +256,7 @@ pipeline = Pipeline([ # Optimal
                     ('tfidf', TfidfTransformer(use_idf=True)),
                     ('clf', LinearSVC(loss='hinge', penalty='l2', max_iter=1000, C=500, dual=True)),])  # dual: True for Text/High Feature Count
 
-Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SVM)')
 ###
 
 
@@ -285,7 +287,7 @@ parameters = {'clf__C': [1, 500, 1000],
               'union__vect2__strip_accents': ['unicode'],
               'union__vect2__tokenizer': [LemmaTokenizer()],} 
 
-#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Logistic Regression)')
 
 # Grid Search Off
 pipeline = Pipeline([ # Optimal
@@ -299,7 +301,10 @@ pipeline = Pipeline([ # Optimal
                     )),
 
                     ('tfidf', TfidfTransformer(use_idf=True)),
+                    #('feature_selection', TruncatedSVD(n_components=2000)),
+                    ('feature_selection', SelectKBest(score_func=chi2, k=4100)),  # Dimensionality Reduction
+                    #('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='1.4*mean')),  # Dimensionality Reduction
                     ('clf', LogisticRegression(penalty='l2', max_iter=1000, C=500, dual=True)),])  # dual: True for Text/High Feature Count
 
-Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Logistic Regression)')
 ###
