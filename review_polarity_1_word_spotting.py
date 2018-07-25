@@ -143,10 +143,10 @@ np.set_printoptions(precision=10)  # Numpy Precision when Printing
 data_train, data_test, labels_train, labels_test = train_test_split(dataset.data, dataset.target, test_size=0.30, random_state=22)
 
 # Create
-Run_Classifier(0, 0, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
+#Run_Classifier(0, 1, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
 # or Load
 clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords.pkl')
-quit()
+
 
 ### LET'S BUILD : Word Spotting and Counting using Opinion Lexicon
 
