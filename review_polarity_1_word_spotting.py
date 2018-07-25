@@ -4,10 +4,10 @@ Sentiment Analysis Using Interesting Techniques. Bo Pang and Lillian Lee (ACL 20
 
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_extraction.stop_words import ENGLISH_STOP_WORDS
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.model_selection import GridSearchCV
-from sklearn.feature_extraction.stop_words import ENGLISH_STOP_WORDS
 from sklearn import metrics
 from nltk.corpus import stopwords
 from nltk.corpus import wordnet as wn
