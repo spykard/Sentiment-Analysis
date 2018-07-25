@@ -76,7 +76,7 @@ def Run_Classifier(grid_search_enable, pickle_enable, data_train, data_test, lab
                         grid_go.cv_results_['std_test_score'][i]))
 
         # (2) Model Persistence (Pickle)
-        if pickle_enable == 1: joblib.dump(grid_go.best_estimator_, './pickled_models/review_polarity/TrainedBagOfWords2.pkl')  
+        if pickle_enable == 1: joblib.dump(grid_go.best_estimator_, './pickled_models/review_polarity/TrainedBagOfWords.pkl')  
 
         # (3) PREDICT
         predicted = grid_go.predict(data_test)
@@ -100,7 +100,7 @@ def Run_Classifier(grid_search_enable, pickle_enable, data_train, data_test, lab
         pipeline.fit(data_train, labels_train)
 
         # (2) Model Persistence (Pickle)
-        if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/TrainedBagOfWords2.pkl') 
+        if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/TrainedBagOfWords.pkl') 
 
         # (3) PREDICT
         predicted = pipeline.predict(data_test)
@@ -144,7 +144,7 @@ data_train, data_test, labels_train, labels_test = train_test_split(dataset.data
 # Create
 #Run_Classifier(0, 1, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized)
 # or Load
-clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords2.pkl')
+clf = joblib.load('./pickled_models/review_polarity/TrainedBagOfWords.pkl')
 
 
 ### LET'S BUILD : Word Spotting and Counting using Opinion Lexicon
