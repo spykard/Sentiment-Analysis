@@ -137,14 +137,13 @@ pipeline = Pipeline([
                     ('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),  # Dimensionality Reduction  
                     ('clf', MLPClassifier(verbose=True)),])  
 
-parameters = {'clf__hidden_layer_sizes': [(100,50)],
+parameters = {'clf__hidden_layer_sizes': [(200,)],
               'clf__max_iter': [500],
               'clf__solver': ['sgd'],
               'clf__learning_rate': ['adaptive'],
-              'clf__learning_rate_init': [0.65],
-              'clf__momentum': [0.6],
-              'clf__alpha': [1.e-01, 1.e-03, 1.e-04, 1.e-06],}
-
+              'clf__learning_rate_init': [0.60],
+              'clf__momentum': [0.5],
+              'clf__alpha': [1e-01],}
 
 Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
 quit()
