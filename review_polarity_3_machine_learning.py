@@ -145,7 +145,7 @@ parameters = {'clf__hidden_layer_sizes': [(200,)],
               'clf__momentum': [0.5],
               'clf__alpha': [1e-01],}
 
-Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
+#Run_Classifier(1, 0, pipeline, parameters, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
 quit()
 
 
