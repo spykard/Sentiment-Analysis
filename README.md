@@ -2,6 +2,6 @@
 
 Techniques and thoughts on Natural Language Processing and Sentiment Analysis
 
-1.
-2.
-3.
+1. Word Spotting and Counting using Opinion Lexicon
+2. Word Spotting using SentiWordNet and Word-Sense Disambiguation
+3. Machine Learning
