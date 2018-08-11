@@ -17,7 +17,6 @@ import sys
 from time import time
 
 import numpy as np
-
 ###
 # Load only some Categories
 #categories = [
