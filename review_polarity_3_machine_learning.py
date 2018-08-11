@@ -162,7 +162,7 @@ pipeline = Pipeline([ # Optimal
                     ('feature_selection', SelectKBest(score_func=chi2, k=5000)),  # Dimensionality Reduction                   
                     ('clf', MultinomialNB()),])  
 
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Naive Bayes)')
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Naive Bayes)')
 ###
 
 
@@ -209,7 +209,7 @@ pipeline = Pipeline([ # Optimal
                     ('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),  # Dimensionality Reduction 
                     ('clf', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=1000, tol=None, n_jobs=-1)),]) 
 
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SGDC-SVM)')
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SGDC-SVM)')
 ###
 
 
@@ -255,7 +255,7 @@ pipeline = Pipeline([ # Optimal
                     ('tfidf', TfidfTransformer(use_idf=True)),
                     ('clf', LinearSVC(loss='hinge', penalty='l2', max_iter=1000, C=500, dual=True)),])  # dual: True for Text/High Feature Count
 
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SVM)')
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(SVM)')
 ###
 
 
@@ -302,7 +302,7 @@ pipeline = Pipeline([ # Optimal
                     ('feature_selection', SelectKBest(score_func=chi2, k=5000)),  # Dimensionality Reduction
                     ('clf', LogisticRegression(penalty='l2', max_iter=1000, C=500, dual=True)),])  # dual: True for Text/High Feature Count
 
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Logistic Regression)')
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, dataset.target_names, stopwords_complete_lemmatized, '(Logistic Regression)')
 ###
 
 
@@ -320,13 +320,13 @@ pipeline = Pipeline([
                     ('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),  # Dimensionality Reduction  
                     ('clf', MLPClassifier(verbose=True)),])  
 
-parameters = {'clf__hidden_layer_sizes': [(200,)],
+parameters = {'clf__hidden_layer_sizes': [(200,), (100,), (100,50,)],
               'clf__max_iter': [500],
               'clf__solver': ['sgd'],
               'clf__learning_rate': ['adaptive'],
               'clf__learning_rate_init': [0.60],
               'clf__momentum': [0.50],
-              'clf__alpha': [1e-01],
+              'clf__alpha': [1e-01, 1e-02, 1e-03, 1e-04, 1e-05, 1e-06],
               'tfidf__use_idf': [True],
               'union__transformer_weights': [{'vect1':1.0, 'vect2':1.0},],
               'union__vect1__max_df': [0.80,],
