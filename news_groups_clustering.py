@@ -1,5 +1,5 @@
 '''
-Clustering (Unsupervised Machine Learning) Reviews. 20 Newsgroups Dataset
+Birch Spherical K-Means Clustering (Unsupervised Machine Learning). 20 Newsgroups Dataset
 '''
 
 from sklearn.model_selection import train_test_split
@@ -53,9 +53,8 @@ stopwords_complete_lemmatized = set([wnl.lemmatize(word) for word in stopwords_c
 
 np.set_printoptions(precision=10)  # Numpy Precision when Printing
 
-# ! I DO THIS TO WORK WITH LESS INSTANCES !
-# Split, data & labels are pairs
-data, data_unused, labels, labels_unused = train_test_split(dataset.data, dataset.target, stratify=dataset.target, test_size=0.95)
+# Select only Part of the Dataset/Instances
+data, data_unused, labels, labels_unused = train_test_split(dataset.data, dataset.target, stratify=dataset.target, test_size=0.50)
 
 print('\nDocuments: ', len(labels))
 print('Categories: ', len(dataset.target_names))
@@ -73,7 +72,6 @@ pipeline1 = Pipeline([ # Optimal
                             'vect2': 1.0,},
                     )),
                     ('tfidf', TfidfTransformer(use_idf=True)),])
-                    #('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),  # Dimensionality Reduction 
 
 X = pipeline1.fit_transform(data)
 
@@ -81,15 +79,10 @@ X = pipeline1.fit_transform(data)
 # Vectorizer results are normalized, which makes KMeans behave as spherical k-means for better results. 
 # Since LSA/SVD results are not normalized, we have to redo the normalization.
 pipeline2 = Pipeline([
-                    ('svd', TruncatedSVD(99)),
+                    ('svd', TruncatedSVD(800)),  
                     ('norm', Normalizer(copy=False)),])
 
 X = pipeline2.fit_transform(X)
-
-# ?????
-# explained_variance = svd.explained_variance_ratio_.sum()
-# print("Explained variance of the SVD step: {}%".format(
-#     int(explained_variance * 100)))
 
 print('\nNumber of Features/Dimension is:', X.shape[1], '\n') 
 
@@ -98,9 +91,9 @@ print('\nNumber of Features/Dimension is:', X.shape[1], '\n')
 # Trial and Error, until we get the Root to have as many Children as there are Categories
 true_k = len(dataset.target_names)
 while True: 
-    tresholdSplit = random.uniform(0.40, 0.70) 
+    tresholdSplit = random.uniform(0.30, 0.64) 
     birch = Birch(n_clusters=20, threshold=tresholdSplit)  
-    print('Clustering Attempt with threshold:', tresholdSplit)
+    print('Birch Clustering Attempt with threshold:', tresholdSplit)
     birch.fit(X)
 
     print(len(birch.root_.subclusters_), 'vs.', true_k)
