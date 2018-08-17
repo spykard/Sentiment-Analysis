@@ -173,11 +173,11 @@ print("Silhouette Coefficient: %0.3f"
 original_space_centroids = pipeline2.named_steps['svd'].inverse_transform(km3.cluster_centers_)
 order_centroids = original_space_centroids.argsort()[:, ::-1]
 
-features = pipeline1.named_steps['union'].get_feature_names()
-print('Top terms per cluster:')
+features = [w[7:] for w in pipeline1.named_steps['union'].get_feature_names()]  # Get the Features from a Pipeline+Union
+print('\n\nTop terms per cluster:')
 for i in range(true_k):
     print('Cluster %d:' % i, end='')
     for ind in order_centroids[i, :10]:
-        print(' %s' % features[ind], end='')
-    print()
+        print(' %s,' % features[ind], end='')
+    print()    
 ###
