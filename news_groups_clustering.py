@@ -44,29 +44,26 @@ class LemmaTokenizer(object):
         return temp
 
 
-
-# Load all Categories
-
+### PREPROCESSING
+dataset = load_files('./datasets/news_groups', encoding='latin1', shuffle=False)  # Load all Categories
 
 stopwords_complete = set(stopwords.words('english')).union(set(ENGLISH_STOP_WORDS))
 wnl = WordNetLemmatizer()
 stopwords_complete_lemmatized = set([wnl.lemmatize(word) for word in stopwords_complete])
 
-# dataset = fetch_20newsgroups(subset='all', shuffle=False, random_state=22)
-dataset = load_files('./datasets/news_groups', encoding='latin1', shuffle=False)
+np.set_printoptions(precision=10)  # Numpy Precision when Printing
 
-X_train, X_test, y_train, y_test = train_test_split(dataset.data, dataset.target, stratify=dataset.target, test_size=0.95)
+# ! I DO THIS TO WORK WITH LESS INSTANCES !
+# Split, data & labels are pairs
+data, data_unused, labels, labels_unused = train_test_split(dataset.data, dataset.target, stratify=dataset.target, test_size=0.95)
 
-print("%d documents" % len(y_train))
-print("%d categories" % len(dataset.target_names))
-print()
+print('\nDocuments: ', len(labels))
+print('Categories: ', len(dataset.target_names))
 
-labels = y_train
-true_k = np.unique(labels).shape[0]
 
-print("Extracting features from the training dataset using a vectorizer")
+### LET'S BUILD : Birch Spherical K-Means Clustering
 
-pipeline = Pipeline([ # Optimal
+pipeline1 = Pipeline([ # Optimal
                     ('union', FeatureUnion(transformer_list=[      
                         ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
                         ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
@@ -78,95 +75,78 @@ pipeline = Pipeline([ # Optimal
                     ('tfidf', TfidfTransformer(use_idf=True)),])
                     #('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),  # Dimensionality Reduction 
 
+X = pipeline1.fit_transform(data)
 
-X = pipeline.fit_transform(X_train)
+# Note :
+# Vectorizer results are normalized, which makes KMeans behave as spherical k-means for better results. 
+# Since LSA/SVD results are not normalized, we have to redo the normalization.
+pipeline2 = Pipeline([
+                    ('svd', TruncatedSVD(99)),
+                    ('norm', Normalizer(copy=False)),])
 
-print("n_samples: %d, n_features: %d" % X.shape)
-print()
+X = pipeline2.fit_transform(X)
+
+# ?????
+# explained_variance = svd.explained_variance_ratio_.sum()
+# print("Explained variance of the SVD step: {}%".format(
+#     int(explained_variance * 100)))
+
+print('\nNumber of Features/Dimension is:', X.shape[1], '\n') 
 
 
-print("Performing dimensionality reduction using LSA")
-# Vectorizer results are normalized, which makes KMeans behave as
-# spherical k-means for better results. Since LSA/SVD results are
-# not normalized, we have to redo the normalization.
-svd = TruncatedSVD(99)
-normalizer = Normalizer(copy=False) # IMPORTANT
-lsa = Pipeline([
-               ('svd', svd),
-               ('norm', normalizer),])
-
-X = lsa.fit_transform(X)
-
-explained_variance = svd.explained_variance_ratio_.sum()
-print("Explained variance of the SVD step: {}%".format(
-    int(explained_variance * 100)))
-
-print()
-
-print(X.shape)
-
-# #############################################################################
-# Do the actual clustering
-while True:  # Trial and Error until we get the Root to have 4 Children
-    if true_k == 4:
-        # tresholdSplit = random.uniform(0.86, 0.92)
-        tresholdSplit = random.uniform(0.945, 0.971)
-    elif true_k == 20:
-        # tresholdSplit = random.uniform(0.405, 0.44)
-        tresholdSplit = random.uniform(0.40, 0.70)
-
+### Birch
+# Trial and Error, until we get the Root to have as many Children as there are Categories
+true_k = len(dataset.target_names)
+while True: 
+    tresholdSplit = random.uniform(0.40, 0.70) 
     birch = Birch(n_clusters=20, threshold=tresholdSplit)  
-    print("Clustering sparse data with %s" % birch)
-    birch.fit(X) 
+    print('Clustering Attempt with threshold:', tresholdSplit)
+    birch.fit(X)
 
+    print(len(birch.root_.subclusters_), 'vs.', true_k)
     # print(len(birch.subcluster_centers_))
-    print(true_k, len(birch.root_.subclusters_))
-
     if len(birch.root_.subclusters_) == true_k: break
 
-inputToKMeansArray = list()
-
-for clusterFromRoot in birch.root_.subclusters_:
-    # print(clusterFromRoot.n_samples_)
-    # print(clusterFromRoot.centroid_)    
-    inputToKMeansArray.append(list(clusterFromRoot.centroid_))
-
-np.array(inputToKMeansArray)
-for i, j in enumerate(inputToKMeansArray):
-    inputToKMeansArray[i] = np.array(j)
-
-# With Birch
-km = KMeans(n_clusters=true_k, init=np.array(inputToKMeansArray), max_iter=300, n_init=1,
-                  verbose=False)               
-
-# Without Birch
-km2 = KMeans(n_clusters=true_k, init='k-means++', max_iter=300, n_init=1,
-                  verbose=False)     
-
-print("Clustering sparse data with %s" % km)
-
-print("\n(Birch)")
-km.fit(X)
+print("\n(Birch Classic)")
 print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, birch.labels_))
 print("Completeness: %0.3f" % metrics.completeness_score(labels, birch.labels_))
 print("V-measure: %0.3f" % metrics.v_measure_score(labels, birch.labels_))
-print("Adjusted Rand-Index: %.3f"
+print("Adjusted Rand-Index: %0.3f"
       % metrics.adjusted_rand_score(labels, birch.labels_))
 print("Silhouette Coefficient: %0.3f"
       % metrics.silhouette_score(X, birch.labels_, sample_size=1000))
+###
 
-print("\n(Birch then KMeans)")
-km.fit(X)
-print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km.labels_))
-print("Completeness: %0.3f" % metrics.completeness_score(labels, km.labels_))
-print("V-measure: %0.3f" % metrics.v_measure_score(labels, km.labels_))
+
+input_to_KMeans = list()
+for cluster_from_root in birch.root_.subclusters_:
+    # print(cluster_from_root.n_samples_)
+    # print(cluster_from_root.centroid_)    
+    input_to_KMeans.append(list(cluster_from_root.centroid_))
+
+input_to_KMeans = np.asarray(input_to_KMeans)
+for i, j in enumerate(input_to_KMeans):
+    input_to_KMeans[i] = np.array(j)
+
+
+# K-Means Classic
+km1 = KMeans(n_clusters=true_k, init='random', max_iter=300, n_init=1, verbose=False) 
+km1.fit(X)
+
+print("\n(K-Means Classic)")
+print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km1.labels_))
+print("Completeness: %0.3f" % metrics.completeness_score(labels, km1.labels_))
+print("V-measure: %0.3f" % metrics.v_measure_score(labels, km1.labels_))
 print("Adjusted Rand-Index: %.3f"
-      % metrics.adjusted_rand_score(labels, km.labels_))
+      % metrics.adjusted_rand_score(labels, km1.labels_))
 print("Silhouette Coefficient: %0.3f"
-      % metrics.silhouette_score(X, km.labels_, sample_size=1000))
+      % metrics.silhouette_score(X, km1.labels_, sample_size=1000))  
 
-print("\n(KMeans)")
+# K-Means with SciKit's Technique
+km2 = KMeans(n_clusters=true_k, init='k-means++', max_iter=300, n_init=1, verbose=False)
 km2.fit(X)
+
+print("\n(K-Means with SciKit's Technique)")
 print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km2.labels_))
 print("Completeness: %0.3f" % metrics.completeness_score(labels, km2.labels_))
 print("V-measure: %0.3f" % metrics.v_measure_score(labels, km2.labels_))
@@ -175,20 +155,29 @@ print("Adjusted Rand-Index: %.3f"
 print("Silhouette Coefficient: %0.3f"
       % metrics.silhouette_score(X, km2.labels_, sample_size=1000))  
 
-print()
+#  K-Means with Birch
+km3 = KMeans(n_clusters=true_k, init=input_to_KMeans, max_iter=300, n_init=1, verbose=False)               
+km3.fit(X)
 
-# if not opts.use_hashing:
-#     print("Top terms per cluster:")
+print("\n([!] K-Means with Birch)")
+print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km3.labels_))
+print("Completeness: %0.3f" % metrics.completeness_score(labels, km3.labels_))
+print("V-measure: %0.3f" % metrics.v_measure_score(labels, km3.labels_))
+print("Adjusted Rand-Index: %.3f"
+      % metrics.adjusted_rand_score(labels, km3.labels_))
+print("Silhouette Coefficient: %0.3f"
+      % metrics.silhouette_score(X, km3.labels_, sample_size=1000))
 
-#     if opts.n_components:
-#         original_space_centroids = svd.inverse_transform(km.cluster_centers_)
-#         order_centroids = original_space_centroids.argsort()[:, ::-1]
-#     else:
-#         order_centroids = km.cluster_centers_.argsort()[:, ::-1]
 
-#     terms = vectorizer.get_feature_names()
-#     for i in range(true_k):
-#         print("Cluster %d:" % i, end='')
-#         for ind in order_centroids[i, :10]:
-#             print(' %s' % terms[ind], end='')
-#         print()
+### Print Top Terms per Cluster
+original_space_centroids = pipeline2.named_steps['svd'].inverse_transform(km3.cluster_centers_)
+order_centroids = original_space_centroids.argsort()[:, ::-1]
+
+features = pipeline1.named_steps['union'].get_feature_names()
+print('Top terms per cluster:')
+for i in range(true_k):
+    print('Cluster %d:' % i, end='')
+    for ind in order_centroids[i, :10]:
+        print(' %s' % features[ind], end='')
+    print()
+###
