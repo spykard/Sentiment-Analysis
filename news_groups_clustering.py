@@ -91,7 +91,7 @@ print('\nNumber of Features/Dimension is:', X.shape[1], '\n')
 # Trial and Error, until we get the Root to have as many Children as there are Categories
 true_k = len(dataset.target_names)
 while True: 
-    tresholdSplit = random.uniform(0.30, 0.64) 
+    tresholdSplit = random.uniform(0.25, 0.60) 
     birch = Birch(n_clusters=20, threshold=tresholdSplit)  
     print('Birch Clustering Attempt with threshold:', tresholdSplit)
     birch.fit(X)
