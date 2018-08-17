@@ -1,39 +1,56 @@
-from __future__ import print_function
-from sklearn.datasets import fetch_20newsgroups
+'''
+Clustering (Unsupervised Machine Learning) Reviews. 20 Newsgroups Dataset
+'''
+
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_extraction.stop_words import ENGLISH_STOP_WORDS
+from sklearn.cluster import KMeans, MiniBatchKMeans, Birch
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.feature_selection import SelectFromModel, SelectKBest, chi2
 from sklearn.decomposition import TruncatedSVD
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
 from sklearn import metrics
+from nltk.corpus import stopwords
+from nltk.corpus import wordnet as wn
+from nltk.corpus import sentiwordnet as swn
+from nltk import word_tokenize, sent_tokenize, pos_tag
+from nltk.stem import WordNetLemmatizer
 
-from sklearn.cluster import KMeans, MiniBatchKMeans, Birch
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
-import logging
-import random
-from optparse import OptionParser
-import sys
-from time import time
-
-import numpy as np
-###
-# Load only some Categories
-#categories = [
-#    'alt.atheism',
-#    'talk.religion.misc',
-#    'comp.graphics',
-#    'sci.space',
-#]
-###
-
-print()
-print("Loading 20 newsgroups dataset for categories:")
-
-from sklearn.feature_selection import SelectFromModel, SelectKBest, chi2
-from sklearn.model_selection import train_test_split
-from sklearn.cluster import AgglomerativeClustering
 from sklearn.datasets import load_files
+from sklearn.externals import joblib
+from re import sub
+import numpy as np
+import string
+import copy
+import random
+
+class LemmaTokenizer(object):
+    '''    Override SciKit's default Tokenizer    '''
+    def __init__(self):
+        self.wnl = WordNetLemmatizer()
+        # This punctuation remover has the best Speed Performance
+        self.translator = str.maketrans('','', sub('\'', '', string.punctuation))
+    def __call__(self, doc):
+        # return [self.wnl.lemmatize(t.lower()) for t in word_tokenize(doc)]
+        temp = []
+        for t in word_tokenize(doc):
+            x = t.translate(self.translator) 
+            if x != '': temp.append(self.wnl.lemmatize(x.lower())) 
+        
+        return temp
+
+
+
+# Load all Categories
+
+
+stopwords_complete = set(stopwords.words('english')).union(set(ENGLISH_STOP_WORDS))
+wnl = WordNetLemmatizer()
+stopwords_complete_lemmatized = set([wnl.lemmatize(word) for word in stopwords_complete])
 
 # dataset = fetch_20newsgroups(subset='all', shuffle=False, random_state=22)
 dataset = load_files('./datasets/news_groups', encoding='latin1', shuffle=False)
@@ -49,10 +66,20 @@ true_k = np.unique(labels).shape[0]
 
 print("Extracting features from the training dataset using a vectorizer")
 
-vectorizer = TfidfVectorizer(max_df=0.5, max_features=100,
-                                min_df=2, stop_words='english',
-                                use_idf=True)
-X = vectorizer.fit_transform(X_train)
+pipeline = Pipeline([ # Optimal
+                    ('union', FeatureUnion(transformer_list=[      
+                        ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
+                        ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
+
+                        transformer_weights={
+                            'vect1': 1.0,
+                            'vect2': 1.0,},
+                    )),
+                    ('tfidf', TfidfTransformer(use_idf=True)),])
+                    #('feature_selection', SelectFromModel(estimator=LinearSVC(), threshold='2.5*mean')),  # Dimensionality Reduction 
+
+
+X = pipeline.fit_transform(X_train)
 
 print("n_samples: %d, n_features: %d" % X.shape)
 print()
@@ -64,7 +91,9 @@ print("Performing dimensionality reduction using LSA")
 # not normalized, we have to redo the normalization.
 svd = TruncatedSVD(99)
 normalizer = Normalizer(copy=False) # IMPORTANT
-lsa = make_pipeline(svd, normalizer)
+lsa = Pipeline([
+               ('svd', svd),
+               ('norm', normalizer),])
 
 X = lsa.fit_transform(X)
 
