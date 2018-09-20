@@ -78,6 +78,8 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
 
     Print_Result_Metrics(labels_test, predicted, targetnames, model_name)  
 
+    return predicted
+
 def Print_Result_Metrics(labels_test, predicted, targetnames, model_name):
     '''    Print Metrics after Training etc.    '''
     print('\n- - - - - RESULT METRICS', model_name, '- - - - -')
@@ -151,7 +153,7 @@ pipeline = Pipeline([ # Optimal
 #Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
 ###
 
-### LET'S BUILD : Logistic Regression
+### Logistic Regression 0.61 accuracy
 
 # Grid Search Off
 pipeline = make_pipeline_imb( # Optimal
@@ -171,8 +173,7 @@ pipeline = make_pipeline_imb( # Optimal
 #Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
 ###
 
-
-
+# SGD 0.54 accuracy
 
 # Grid Search Off
 pipeline = make_pipeline_imb( # Optimal
@@ -185,8 +186,34 @@ pipeline = make_pipeline_imb( # Optimal
                                     'vect2': 1.0,},
                             ),
                             TfidfTransformer(use_idf=True),
+                            RandomUnderSampler(ratio={2: 24000}),
                             SelectFromModel(estimator=LinearSVC(), threshold='1.5*mean'),  # Dimensionality Reduction               
                             SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=1000, tol=None, n_jobs=-1, class_weight='balanced'),)  
 
-Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
+#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(SGD)')
 ###
+
+# MLP 0.60
+
+# Grid Search Off
+pipeline = make_pipeline_imb( # Optimal
+                            FeatureUnion(transformer_list=[      
+                                ('vect1', CountVectorizer(max_df=0.80, min_df=8, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
+                                ('vect2', CountVectorizer(max_df=0.95, min_df=10, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
+
+                                transformer_weights={
+                                    'vect1': 1.0,
+                                    'vect2': 1.0,},
+                            ),
+                            TfidfTransformer(use_idf=True),
+                            RandomUnderSampler(ratio={2: 22000}),
+                            SelectFromModel(estimator=LinearSVC(), threshold='1.5*mean'),  # Dimensionality Reduction               
+                            MLPClassifier(verbose=True, hidden_layer_sizes=(200,), max_iter=100, solver='sgd', learning_rate='adaptive', learning_rate_init=0.60, momentum=0.50, alpha=1e-01),)  
+                            #MLPClassifier(verbose=True, random_state=22, hidden_layer_sizes=(100,), max_iter=100, solver='sgd', learning_rate='constant', learning_rate_init=0.07, momentum=0.90, alpha=1e-01),)
+
+predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
+###
+
+
+#output_file = pd.DataFrame(data={'PhraseId':labels_test, 'Sentiment':predicted})
+#output_file.to_csv('submission.csv', index=False)
