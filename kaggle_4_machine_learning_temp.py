@@ -68,7 +68,7 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
 
         # (1) TRAIN
         pipeline.fit(data_train, labels_train)
-        if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['clf'].coef_.shape[1])
+        if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['sgdclassifier'].coef_.shape[1])
 
         # (2) Model Persistence (Pickle)
         if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/Classifier.pkl') 
@@ -107,7 +107,7 @@ import pandas as pd
 from sklearn.svm import SVC
 from sklearn.pipeline import make_pipeline
 from imblearn.under_sampling import RandomUnderSampler
-from imblearn.combine import SMOTEENN 
+from imblearn.combine import SMOTETomek 
 from imblearn.pipeline import make_pipeline as make_pipeline_imb
 from imblearn.metrics import classification_report_imbalanced
 
@@ -124,7 +124,7 @@ stopwords_complete_lemmatized = set([wnl.lemmatize(word) for word in stopwords_c
 np.set_printoptions(precision=10)  # Numpy Precision when Printing
 
 # Split, data & labels are pairs
-data_train, data_test, labels_train, labels_test = train_test_split(train['Phrase'], train['Sentiment'], test_size=0.20, random_state=22)
+data_train, data_test, labels_train, labels_test = train_test_split(train['Phrase'], train['Sentiment'], test_size=0.40, random_state=22)
 
 # Dimensionality Reduction - 4 different ways to pick the best Features 
 #   (1) ('feature_selection', SelectKBest(score_func=chi2, k=5000)),                    
@@ -151,7 +151,7 @@ pipeline = Pipeline([ # Optimal
 #Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
 ###
 
-### LET'S BUILD : Naive Bayes
+### LET'S BUILD : Logistic Regression
 
 # Grid Search Off
 pipeline = make_pipeline_imb( # Optimal
@@ -164,9 +164,29 @@ pipeline = make_pipeline_imb( # Optimal
                                     'vect2': 1.0,},
                             ),
                             TfidfTransformer(use_idf=True),
-                            SMOTEENN(),
-                            SelectKBest(score_func=chi2, k=10000),  # Dimensionality Reduction                   
-                            MultinomialNB(),)  
+                            RandomUnderSampler(ratio={2: 24000}),
+                            SelectKBest(score_func=chi2, k=5000),  # Dimensionality Reduction                  
+                            LogisticRegression(penalty='l2', max_iter=1000, C=500, dual=True, class_weight='balanced', random_state=22),)  
 
-Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
+#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
+###
+
+
+
+
+# Grid Search Off
+pipeline = make_pipeline_imb( # Optimal
+                            FeatureUnion(transformer_list=[      
+                                ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
+                                ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
+
+                                transformer_weights={
+                                    'vect1': 1.0,
+                                    'vect2': 1.0,},
+                            ),
+                            TfidfTransformer(use_idf=True),
+                            SelectFromModel(estimator=LinearSVC(), threshold='1.5*mean'),  # Dimensionality Reduction               
+                            SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=1000, tol=None, n_jobs=-1, class_weight='balanced'),)  
+
+Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
 ###
