@@ -68,7 +68,7 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
 
         # (1) TRAIN
         pipeline.fit(data_train, labels_train)
-        if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['sgdclassifier'].coef_.shape[1])
+        #if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['sgdclassifier'].coef_.shape[1])
 
         # (2) Model Persistence (Pickle)
         if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/Classifier.pkl') 
@@ -108,8 +108,12 @@ class LemmaTokenizer(object):
 import pandas as pd
 from sklearn.svm import SVC
 from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline
+from imblearn.under_sampling import CondensedNearestNeighbour # 0.6057
+from imblearn.under_sampling import EditedNearestNeighbours 
 from imblearn.under_sampling import RandomUnderSampler
-from imblearn.combine import SMOTETomek 
+from imblearn.over_sampling import SMOTE
+from imblearn.combine import SMOTEENN 
 from imblearn.pipeline import make_pipeline as make_pipeline_imb
 from imblearn.metrics import classification_report_imbalanced
 
@@ -166,11 +170,12 @@ pipeline = make_pipeline_imb( # Optimal
                                     'vect2': 1.0,},
                             ),
                             TfidfTransformer(use_idf=True),
-                            RandomUnderSampler(ratio={2: 24000}),
-                            SelectKBest(score_func=chi2, k=5000),  # Dimensionality Reduction                  
+                            SMOTE(ratio={0: 11500, 4: 12500}, random_state=22),
+                            RandomUnderSampler(ratio={2: 19500}, random_state=22),
+                            SelectKBest(score_func=chi2, k=1000),  # Dimensionality Reduction                  
                             LogisticRegression(penalty='l2', max_iter=1000, C=500, dual=True, class_weight='balanced', random_state=22),)  
 
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
+predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
 ###
 
 # SGD 0.54 accuracy
@@ -206,13 +211,71 @@ pipeline = make_pipeline_imb( # Optimal
                                     'vect2': 1.0,},
                             ),
                             TfidfTransformer(use_idf=True),
-                            RandomUnderSampler(ratio={2: 22000}),
+                            RandomUnderSampler(ratio={2: 20000}),
                             SelectFromModel(estimator=LinearSVC(), threshold='1.5*mean'),  # Dimensionality Reduction               
                             MLPClassifier(verbose=True, hidden_layer_sizes=(200,), max_iter=100, solver='sgd', learning_rate='adaptive', learning_rate_init=0.60, momentum=0.50, alpha=1e-01),)  
                             #MLPClassifier(verbose=True, random_state=22, hidden_layer_sizes=(100,), max_iter=100, solver='sgd', learning_rate='constant', learning_rate_init=0.07, momentum=0.90, alpha=1e-01),)
 
-predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
+#predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
 ###
+
+### Model 2
+# Get Sentiment Words from a generic Opinion Lexicon
+
+print("Loading Special Weights...")
+specialweights = pd.read_csv("./kaggle_temp/specialWeights.csv", sep=",")
+print("Special Weights shape:", train.shape)
+
+specialweights = specialweights.drop('Count', 1)
+
+
+pos_words = []
+neg_words = []
+for line in open('./opinion_lexicon/positive-words.txt', 'r'):
+    pos_words.append(line.rstrip())  # Must strip Newlines
+
+for line in open('./opinion_lexicon/negative-words.txt', 'r'):
+    neg_words.append(line.rstrip())  # Must strip Newlines  
+
+wnl = WordNetLemmatizer()
+translator = str.maketrans('','', sub('\'', '', string.punctuation))
+
+for i in range(0, len(predicted)):
+    # HYPOTHESIS
+    if predicted == 2:
+        temp = []
+        for t in word_tokenize(data_test[i]):
+            x = t.translate(translator) 
+            if x != '': temp.append(wnl.lemmatize(x.lower())) 
+        
+
+
+
+count_vect = CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
+data_test_counts = count_vect.fit_transform(data_test)
+
+data_array = data_test_counts.toarray()
+vocabulary = count_vect.vocabulary_
+final_array = np.zeros(len(data_test))  # Array of the Score for each Document
+countImpact_Pos = countImpact_Neg = 0
+
+for word in pos_words:  # For each Sentimental Word update the Array
+    if word in vocabulary:
+        for i in range(0, len(data_test)):
+            temp = data_array[i, vocabulary.get(word)]
+            final_array[i] += temp
+            countImpact_Pos += np.sum(temp)
+
+for word in neg_words:  # For each Sentimental Word update the Array
+    if word in vocabulary:
+        for i in range(0, len(data_test)):
+            temp = data_array[i, vocabulary.get(word)]
+            final_array[i] -= temp
+            countImpact_Neg += np.sum(temp)   
+
+
+
+
 
 
 #output_file = pd.DataFrame(data={'PhraseId':labels_test, 'Sentiment':predicted})
