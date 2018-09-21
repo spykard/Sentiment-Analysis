@@ -84,7 +84,7 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
 
         # (1) TRAIN
         pipeline.fit(data_train, labels_train)
-        #if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['sgdclassifier'].coef_.shape[1])
+        if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['sgdclassifier'].coef_.shape[1])
 
         # (2) Model Persistence (Pickle)
         if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/Classifier.pkl') 
@@ -147,7 +147,7 @@ stopwords_complete_lemmatized = set([wnl.lemmatize(word) for word in stopwords_c
 np.set_printoptions(precision=10)  # Numpy Precision when Printing
 
 # Split, data & labels are pairs
-data_train, data_test, labels_train, labels_test = train_test_split(train['Phrase'], train['Sentiment'], test_size=0.40, random_state=22)
+data_train, data_test, labels_train, labels_test = train_test_split(train['Phrase'], train['Sentiment'], test_size=0.20, random_state=22)
 
 # Dimensionality Reduction - 4 different ways to pick the best Features 
 #   (1) ('feature_selection', SelectKBest(score_func=chi2, k=5000)),                    
@@ -189,7 +189,7 @@ pipeline = make_pipeline_imb( # Optimal
                             TfidfTransformer(use_idf=True),
                             SMOTE(ratio={0: 11500, 4: 12500}, random_state=22),
                             RandomUnderSampler(ratio={2: 19500}, random_state=22),
-                            SelectKBest(score_func=chi2, k=3000),  # Dimensionality Reduction                  
+                            SelectKBest(score_func=chi2, k=10000),  # Dimensionality Reduction                  
                             LogisticRegression(penalty='l2', max_iter=1000, C=500, dual=True, class_weight='balanced', random_state=22),)  
 
 #predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
@@ -208,11 +208,11 @@ pipeline = make_pipeline_imb( # Optimal
                                     'vect2': 1.0,},
                             ),
                             TfidfTransformer(use_idf=True),
-                            RandomUnderSampler(ratio={2: 24000}),
-                            SelectFromModel(estimator=LinearSVC(), threshold='1.5*mean'),  # Dimensionality Reduction               
+                            RandomUnderSampler(ratio={2: 20000}),
+                            SelectFromModel(estimator=LinearSVC(), threshold='1.2*mean'),  # Dimensionality Reduction               
                             SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=1000, tol=None, n_jobs=-1, class_weight='balanced'),)  
 
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(SGD)')
+#predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(SGD)')
 ###
 
 # MLP 0.60
@@ -229,11 +229,11 @@ pipeline = make_pipeline_imb( # Optimal
                             ),
                             TfidfTransformer(use_idf=True),
                             RandomUnderSampler(ratio={2: 20000}),
-                            SelectFromModel(estimator=LinearSVC(), threshold='1.5*mean'),  # Dimensionality Reduction               
+                            SelectFromModel(estimator=LinearSVC(), threshold='1.2*mean'),  # Dimensionality Reduction               
                             MLPClassifier(verbose=True, hidden_layer_sizes=(200,), max_iter=100, solver='sgd', learning_rate='adaptive', learning_rate_init=0.60, momentum=0.50, alpha=1e-01),)  
                             #MLPClassifier(verbose=True, random_state=22, hidden_layer_sizes=(100,), max_iter=100, solver='sgd', learning_rate='constant', learning_rate_init=0.07, momentum=0.90, alpha=1e-01),)
 
-#predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
+predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
 ###
 
 ### Model 2
@@ -345,21 +345,17 @@ predicted = load('Predictions.pkl')
 
 Print_Result_Metrics(labels_test, predicted, datasettargetnames, '') 
 
-count1 = 0
-count2 = 0
-count3 = 0
-
 for i, score in enumerate(final_array_final):
     # rounding = int(round(score))
     # IF WE HAVE A RECOMMENDATION
     if final_array_countstrength[i] > 0:
-        if score < 0.7:
+        if score < 0.72:
             rounding = 0
-        elif score < 1.69:
+        elif score < 1.75:
             rounding = 1
         elif score < 2.6:
             rounding = 2
-        elif score < 3.3:
+        elif score < 3.36:
             rounding = 3
         elif score < 4.0:
             rounding = 4  
@@ -374,13 +370,13 @@ for i, score in enumerate(final_array_final):
 
         if diff >= 2:         
             if predicted[i] == 0:       ###
-                if diff >= 2:  # Megali Diafora, parto poli deksia
+                if diff >= 3:  # Megali Diafora, parto poli deksia
                     predicted[i] = 2  
                 else:         # Mikri Diafora, parto mono mia thesi deksia
                     if final_array_countstrength[i] > 0: # megalo STRENGTH/CONFIDENCE
                         predicted[i] = 1
             elif predicted[i] == 1:     ###
-                if diff > 2:  # Megali Diafora, kounato poli                    
+                if diff >= 3:  # Megali Diafora, kounato poli                    
                     predicted[i] = 3  
                 else:         # Mikri Diafora, kounato mono mia thesi
                     if side == 'L':
@@ -395,7 +391,7 @@ for i, score in enumerate(final_array_final):
                 # elif side == 'R':
                 #     predicted[i] = 3 
             elif predicted[i] == 3:     ###
-                if diff > 2:  # Megali Diafora, kounato poli                    
+                if diff >= 3:  # Megali Diafora, kounato poli                    
                     predicted[i] = 1  
                 else:         # Mikri Diafora, kounato mono mia thesi
                     if side == 'L':
@@ -403,15 +399,13 @@ for i, score in enumerate(final_array_final):
                     elif side == 'R':
                         predicted[i] = 4 
             elif predicted[i] == 4:     ###
-                if diff > 2:  # Megali Diafora, parto poli deksia
+                if diff >= 3:  # Megali Diafora, parto poli deksia
                     predicted[i] = 2  
                 else:         # Mikri Diafora, parto mono mia thesi deksia
                     if final_array_countstrength[i] > 0: # megalo STRENGTH/CONFIDENCE
                         predicted[i] = 3
 
-#print(count1, count2, count3)
-
 Print_Result_Metrics(labels_test, predicted, datasettargetnames, '') 
 
-#output_file = pd.DataFrame(data={'PhraseId':labels_test, 'Sentiment':predicted})
-#output_file.to_csv('submission.csv', index=False)
+output_file = pd.DataFrame(data={'PhraseId':labels_test, 'Sentiment':predicted})
+output_file.to_csv('submission.csv', index=False)
