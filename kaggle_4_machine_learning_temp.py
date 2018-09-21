@@ -29,6 +29,22 @@ from re import sub
 import numpy as np
 import string
 import copy
+import gzip
+
+def load(file_name):
+    # load the model
+    stream = gzip.open(file_name, "rb")
+    model = pickle.load(stream)
+    stream.close()
+    return model
+
+
+def save(file_name, model):
+    # save the model
+    stream = gzip.open(file_name, "wb")
+    pickle.dump(model, stream)
+    stream.close()
+
 
 def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data_train, data_test, labels_train, labels_test, targetnames, stopwords_complete_lemmatized, model_name):
     '''    Run Classifier with or without Grid Search after Preprocessing is done    '''
@@ -116,6 +132,7 @@ from imblearn.over_sampling import SMOTE
 from imblearn.combine import SMOTEENN 
 from imblearn.pipeline import make_pipeline as make_pipeline_imb
 from imblearn.metrics import classification_report_imbalanced
+import pickle
 
 print("Loading data...")
 train = pd.read_csv("./kaggle_temp/train.tsv", sep="\t")
@@ -172,10 +189,10 @@ pipeline = make_pipeline_imb( # Optimal
                             TfidfTransformer(use_idf=True),
                             SMOTE(ratio={0: 11500, 4: 12500}, random_state=22),
                             RandomUnderSampler(ratio={2: 19500}, random_state=22),
-                            SelectKBest(score_func=chi2, k=1000),  # Dimensionality Reduction                  
+                            SelectKBest(score_func=chi2, k=3000),  # Dimensionality Reduction                  
                             LogisticRegression(penalty='l2', max_iter=1000, C=500, dual=True, class_weight='balanced', random_state=22),)  
 
-predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
+#predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
 ###
 
 # SGD 0.54 accuracy
@@ -224,10 +241,15 @@ pipeline = make_pipeline_imb( # Optimal
 
 print("Loading Special Weights...")
 specialweights = pd.read_csv("./kaggle_temp/specialWeights.csv", sep=",")
-print("Special Weights shape:", train.shape)
+print("Special Weights shape:", specialweights.shape)
+
+specialweights.columns = ['Word', 'Count', 'Sum/Count']
+specialweights.set_index(['Word'])
 
 specialweights = specialweights.drop('Count', 1)
 
+specialWords = specialweights['Word'].tolist()
+specialScore = specialweights['Sum/Count'].tolist()
 
 pos_words = []
 neg_words = []
@@ -236,47 +258,160 @@ for line in open('./opinion_lexicon/positive-words.txt', 'r'):
 
 for line in open('./opinion_lexicon/negative-words.txt', 'r'):
     neg_words.append(line.rstrip())  # Must strip Newlines  
+   
 
-wnl = WordNetLemmatizer()
-translator = str.maketrans('','', sub('\'', '', string.punctuation))
+# count_vect = CountVectorizer(max_df=0.95, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
+# data_test_counts = count_vect.fit_transform(data_test)
 
-for i in range(0, len(predicted)):
-    # HYPOTHESIS
-    if predicted == 2:
-        temp = []
-        for t in word_tokenize(data_test[i]):
-            x = t.translate(translator) 
-            if x != '': temp.append(wnl.lemmatize(x.lower())) 
+# data_array = data_test_counts.toarray()
+# vocabulary = count_vect.vocabulary_
+# final_array = np.zeros((len(data_test), 3))  # Array of the Count/Sum on 0, Count on 1 and Sum on 2
+# countImpact_Pos = countImpact_Neg = 0
+
+# combinePosNeg = pos_words + sorted(set(neg_words) - set(pos_words))
+
+# #final_array[1][0] = 2
+# #save('Count.pkl', final_array[:][0])
+# #print(load('Count.pkl'))
+
+# minimizedNewDict = {}
+
+# for word in combinePosNeg:
+#     if word in vocabulary:
+#         minimizedNewDict[word]=vocabulary[word]
+
+# count = 0
+
+# for word in minimizedNewDict:  # For each Sentimental Word update the Array
+#     sScore = specialScore[specialWords.index(word)]
+#     for i in range(0, len(data_test)):
+#         temp = data_array[i, minimizedNewDict.get(word)]
+#         if temp > 0:
+#             if word in specialWords:
+#                 # print ('word: ', word, '\t i: ', i, '\t sScore: ', sScore)
+#                 final_array[i][1] += temp
+#                 final_array[i][2] += sScore * temp # I have a specific Label recomendation
+#                 #print(i)
+#                 #print(final_array[i][2])
+#                 #print(final_array[i+1][2])
+#             elif word in pos_words:
+#                 final_array[i][1] += temp
+#                 final_array[i][2] += 4 * temp # I have a specific Label recomendation
+#                 countImpact_Pos += 1
+#             elif word in neg_words:
+#                 final_array[i][1] += temp
+#                 final_array[i][2] += 2 * temp # I have a specific Label recomendation
+#                 countImpact_Neg += 1    
+#     count += 1
+#     print(count)
+#     # if count == 100: 
+#     #     break
+
+# for y in range(0, len(data_test)):
+#     if final_array[y][1] != 0:
+#         final_array[y][0] = (final_array[y][2]) / (final_array[y][1])  
+
+# print(final_array[0:50])
+
+# save('Count.pkl', final_array)
+
+final_array_final = load('Count.pkl')
+
+# x = final_array_final[np.argsort(final_array_final[:, 1])]
+# print(x[50000:52000])
+# quit()
+
+final_array_countstrength = final_array_final[:,1]
+final_array_final = final_array_final[:,0]
+
+# for i, score in enumerate(final_array_final):
+#     # rounding = int(round(score))
+#     if score = 0:  # Osa den eixan kamia leksi mesa einai mazi me ta negatives distixos
+#         print('FUCK')
+#     if score < 0.7:
+#         final_array_final[i] = 0
+#     elif score < 1.69:
+#         final_array_final[i] = 1
+#     elif score < 2.6:
+#         final_array_final[i] = 2
+#     elif score < 3.3:
+#         final_array_final[i] = 3
+#     elif score < 4.0:
+#         final_array_final[i] = 4                       
         
+#Print_Result_Metrics(labels_test, final_array_final, datasettargetnames, '')  
 
+predicted = load('Predictions.pkl')
 
+Print_Result_Metrics(labels_test, predicted, datasettargetnames, '') 
 
-count_vect = CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
-data_test_counts = count_vect.fit_transform(data_test)
+count1 = 0
+count2 = 0
+count3 = 0
 
-data_array = data_test_counts.toarray()
-vocabulary = count_vect.vocabulary_
-final_array = np.zeros(len(data_test))  # Array of the Score for each Document
-countImpact_Pos = countImpact_Neg = 0
+for i, score in enumerate(final_array_final):
+    # rounding = int(round(score))
+    # IF WE HAVE A RECOMMENDATION
+    if final_array_countstrength[i] > 0:
+        if score < 0.7:
+            rounding = 0
+        elif score < 1.69:
+            rounding = 1
+        elif score < 2.6:
+            rounding = 2
+        elif score < 3.3:
+            rounding = 3
+        elif score < 4.0:
+            rounding = 4  
 
-for word in pos_words:  # For each Sentimental Word update the Array
-    if word in vocabulary:
-        for i in range(0, len(data_test)):
-            temp = data_array[i, vocabulary.get(word)]
-            final_array[i] += temp
-            countImpact_Pos += np.sum(temp)
+        diff = abs(rounding - predicted[i])
+        if (predicted[i] - rounding) > 0:
+            side = 'L'
+        elif (predicted[i] - rounding) > 0:
+            side = 'R'
+        else:
+            side = 'EQ'
 
-for word in neg_words:  # For each Sentimental Word update the Array
-    if word in vocabulary:
-        for i in range(0, len(data_test)):
-            temp = data_array[i, vocabulary.get(word)]
-            final_array[i] -= temp
-            countImpact_Neg += np.sum(temp)   
+        if diff >= 2:         
+            if predicted[i] == 0:       ###
+                if diff >= 2:  # Megali Diafora, parto poli deksia
+                    predicted[i] = 2  
+                else:         # Mikri Diafora, parto mono mia thesi deksia
+                    if final_array_countstrength[i] > 0: # megalo STRENGTH/CONFIDENCE
+                        predicted[i] = 1
+            elif predicted[i] == 1:     ###
+                if diff > 2:  # Megali Diafora, kounato poli                    
+                    predicted[i] = 3  
+                else:         # Mikri Diafora, kounato mono mia thesi
+                    if side == 'L':
+                        predicted[i] = 0  
+                    elif side == 'R':
+                        predicted[i] = 2 
+            elif predicted[i] == 2:     ###
+                # NO MATTER WHAT MONO MIA THESI
+                predicted[i] = rounding
+                # if side == 'L':
+                #     predicted[i] = 1  
+                # elif side == 'R':
+                #     predicted[i] = 3 
+            elif predicted[i] == 3:     ###
+                if diff > 2:  # Megali Diafora, kounato poli                    
+                    predicted[i] = 1  
+                else:         # Mikri Diafora, kounato mono mia thesi
+                    if side == 'L':
+                        predicted[i] = 2  
+                    elif side == 'R':
+                        predicted[i] = 4 
+            elif predicted[i] == 4:     ###
+                if diff > 2:  # Megali Diafora, parto poli deksia
+                    predicted[i] = 2  
+                else:         # Mikri Diafora, parto mono mia thesi deksia
+                    if final_array_countstrength[i] > 0: # megalo STRENGTH/CONFIDENCE
+                        predicted[i] = 3
 
+#print(count1, count2, count3)
 
-
-
-
+Print_Result_Metrics(labels_test, predicted, datasettargetnames, '') 
 
 #output_file = pd.DataFrame(data={'PhraseId':labels_test, 'Sentiment':predicted})
 #output_file.to_csv('submission.csv', index=False)
