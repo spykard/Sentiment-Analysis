@@ -1,5 +1,5 @@
 '''
-Sentiment Analysis Using Interesting Techniques. Bo Pang and Lillian Lee (ACL 2004) Dataset of Movie Reviews
+Sentiment Analysis Using Interesting Techniques. Kaggle Dataset of Rotten Tomatoes Movie Review
 '''
 
 from sklearn.model_selection import train_test_split
@@ -29,6 +29,8 @@ from re import sub
 import numpy as np
 import string
 import copy
+
+# kaggle_4
 import gzip
 
 def load(file_name):
@@ -166,12 +168,19 @@ count_vect_1 = FeatureUnion(transformer_list=[
 
 data_test_counts_1 = count_vect_1.fit_transform(testset['Phrase'])
 
-print(data_test_counts_1[0])
-print(data_test_counts_1[0, 2345])
-#print(data_array[i, minimizedNewDict.get(word)])
+total_x, total_y = data_test_counts_1.shape
 
-data_array_1 = data_test_counts_1.toarray()
-todelete = np.where(~data_array_1.any(axis=1))[0]
+#print(data_test_counts_1[3])
+#print(data_test_counts_1[0, 2345])
+
+#data_array_1 = data_test_counts_1.toarray()
+#todelete = np.where(data_test_counts_1 == 0)
+x_nonzero, y_nonzero = np.nonzero(data_test_counts_1)
+
+print(total_x, total_y)
+print(len(x_nonzero), len(y_nonzero))
+
+quit()
 
 print(todelete[0:100])
 quit()
