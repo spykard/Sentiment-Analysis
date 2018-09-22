@@ -1,5 +1,5 @@
 '''
-Sentiment Analysis Using Interesting Techniques. Bo Pang and Lillian Lee (ACL 2004) Dataset of Movie Reviews
+Get Sentiment Weight by Word Counting in Small Phrases
 '''
 
 from sklearn.model_selection import train_test_split
