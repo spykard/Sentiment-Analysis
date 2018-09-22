@@ -161,6 +161,7 @@ for line in open('./opinion_lexicon/negative-words.txt', 'r'):
 count_vect = CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
 data_test_counts = count_vect.fit_transform(data_test)
 
+    # Old Version not Using Sparse, New Version at kaggle_4    
 data_array = data_test_counts.toarray()
 vocabulary = count_vect.vocabulary_
 final_array = np.zeros(len(data_test))  # Array of the Score for each Document
