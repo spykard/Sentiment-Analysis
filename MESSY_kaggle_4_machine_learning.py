@@ -84,7 +84,7 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
 
         # (1) TRAIN
         pipeline.fit(data_train, labels_train)
-        #if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['sgdclassifier'].coef_.shape[1])
+        if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['sgdclassifier'].coef_.shape[1])
 
         # (2) Model Persistence (Pickle)
         if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/Classifier.pkl') 
@@ -118,6 +118,7 @@ class LemmaTokenizer(object):
 
         return temp
 
+from sklearn.base import TransformerMixin, BaseEstimator
 
 ### PREPROCESSING
 
@@ -135,8 +136,11 @@ from imblearn.metrics import classification_report_imbalanced
 import pickle
 
 print("Loading data...")
-train = pd.read_csv("./kaggle_temp/train.tsv", sep="\t")
+train = pd.read_csv("./datasets/kaggle/train.tsv", sep="\t")
 print("Train shape:", train.shape)
+
+testset = pd.read_csv("./datasets/kaggle/test.tsv", sep="\t")
+print("Train shape:", testset.shape)
 
 datasettargetnames = ['0', '1', '2', '3', '4']
 
@@ -150,23 +154,27 @@ np.set_printoptions(precision=10)  # Numpy Precision when Printing
 data_train, data_test, labels_train, labels_test = train_test_split(train['Phrase'], train['Sentiment'], test_size=0.20, random_state=22)
 
 
-### LET'S BUILD : SVM
 
-# Grid Search Off
-pipeline = Pipeline([ # Optimal
-                    ('union', FeatureUnion(transformer_list=[      
+count_vect_1 = FeatureUnion(transformer_list=[      
                         ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
                         ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
 
                         transformer_weights={
                             'vect1': 1.0,
                             'vect2': 1.0,},
-                    )),
-                    ('tfidf', TfidfTransformer(use_idf=True)),
-                    #('clf', LinearSVC(loss='hinge', penalty='l2', max_iter=1000, C=500, dual=True, class_weight='balanced')),])  # dual: True for Text/High Feature Count
-                    ('clf', SVC(max_iter=1000, C=500, class_weight='balanced')),])
-#Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
-###
+                    )
+
+data_test_counts_1 = count_vect_1.fit_transform(testset['Phrase'])
+
+print(data_test_counts_1[0])
+print(data_test_counts_1[0, 2345])
+#print(data_array[i, minimizedNewDict.get(word)])
+
+data_array_1 = data_test_counts_1.toarray()
+todelete = np.where(~data_array_1.any(axis=1))[0]
+
+print(todelete[0:100])
+quit()
 
 
 # SGD 0.54 accuracy
@@ -182,12 +190,13 @@ pipeline = make_pipeline_imb( # Optimal
                                     'vect2': 1.0,},
                             ),
                             TfidfTransformer(use_idf=True),
-                            RandomUnderSampler(ratio={2: 20000}),
-                            SelectFromModel(estimator=LinearSVC(), threshold='1.2*mean'),  # Dimensionality Reduction               
+                            RandomUnderSampler(ratio={2: 20000}, random_state=22),
+                            SelectFromModel(estimator=LinearSVC(), threshold='1.5*mean'),  # Dimensionality Reduction               
                             SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=1000, tol=None, n_jobs=-1, class_weight='balanced'),)  
 
-#predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(SGD)')
+predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(SGD)')
 ###
+quit()
 
 # MLP 0.60
 
@@ -202,17 +211,16 @@ pipeline = make_pipeline_imb( # Optimal
                                     'vect2': 1.0,},
                             ),
                             TfidfTransformer(use_idf=True),                           
-                            RandomUnderSampler(ratio={2: 25000}, random_state=22),
+                            RandomUnderSampler(ratio={2: 32000}, random_state=22),
                             SelectFromModel(estimator=LinearSVC(), threshold='1.2*mean'),  # Dimensionality Reduction               
                             #MLPClassifier(verbose=True, hidden_layer_sizes=(200,), max_iter=100, solver='sgd', learning_rate='adaptive', learning_rate_init=0.60, momentum=0.50, alpha=1e-01),)  
                             MLPClassifier(verbose=True, random_state=22, hidden_layer_sizes=(100,), max_iter=100, solver='sgd', learning_rate='constant', learning_rate_init=0.07, momentum=0.90, alpha=1e-01),)
 
-#predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
+#predicted = Run_Classifier(0, 0, pipeline, {}, train['Phrase'], testset['Phrase'], train['Sentiment'], [], datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
 ###
 
-#save('PredictedNeuralNetwork.pkl', predicted)
+#save('.pickled_models/kaggle/PredictedNeuralNetwork.pkl', predicted)
 #quit()
-
 
 ### Model 2
 
@@ -230,20 +238,20 @@ pipeline = make_pipeline_imb( # Optimal
                             ),
                             TfidfTransformer(use_idf=True),
                             #SMOTE(ratio={0: 12500, 4: 14500}, random_state=22),
-                            RandomUnderSampler(ratio={1: 17000, 2: 20000, 3: 18200}, random_state=22),
+                            RandomUnderSampler(ratio={1: 19000, 2: 27200, 3: 20000}, random_state=22),
                             SelectKBest(score_func=chi2, k=5000),  # Dimensionality Reduction                  
                             LogisticRegression(penalty='l2', max_iter=1000, C=500, dual=True, class_weight='balanced', random_state=22),)  
 
-#predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
+#predicted = Run_Classifier(0, 0, pipeline, {}, train['Phrase'], testset['Phrase'], train['Sentiment'], [], datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
 ###
 
-#save('PredictedRegression.pkl', predicted)
+#save('.pickled_models/kaggle/PredictedRegression.pkl', predicted)
 #quit()
 
 # Get Sentiment Words from a generic Opinion Lexicon
 
 print("Loading Special Weights...")
-specialweights = pd.read_csv("./kaggle_temp/specialWeights.csv", sep=",")
+specialweights = pd.read_csv("./pickled_models/kaggle/specialWeights.csv", sep=",")
 print("Special Weights shape:", specialweights.shape)
 
 specialweights.columns = ['Word', 'Count', 'Sum/Count']
@@ -264,18 +272,18 @@ for line in open('./opinion_lexicon/negative-words.txt', 'r'):
    
 
 # count_vect = CountVectorizer(max_df=0.95, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
-# data_test_counts = count_vect.fit_transform(data_test)
+# data_test_counts = count_vect.fit_transform(testset['Phrase'])
 
 # data_array = data_test_counts.toarray()
 # vocabulary = count_vect.vocabulary_
-# final_array = np.zeros((len(data_test), 3))  # Array of the Count/Sum on 0, Count on 1 and Sum on 2
+# final_array = np.zeros((len(testset['Phrase']), 3))  # Array of the Count/Sum on 0, Count on 1 and Sum on 2
 # countImpact_Pos = countImpact_Neg = 0
 
 # combinePosNeg = pos_words + sorted(set(neg_words) - set(pos_words))
 
 # #final_array[1][0] = 2
-# #save('Count.pkl', final_array[:][0])
-# #print(load('Count.pkl'))
+# #save('.pickled_models/kaggle/Count.pkl', final_array[:][0])
+# #print(load('.pickled_models/kaggle/Count.pkl'))
 
 # minimizedNewDict = {}
 
@@ -286,7 +294,8 @@ for line in open('./opinion_lexicon/negative-words.txt', 'r'):
 # count = 0
 
 # for word in minimizedNewDict:  # For each Sentimental Word update the Array
-#     sScore = specialScore[specialWords.index(word)]
+#     if word in specialWords:
+#         sScore = specialScore[specialWords.index(word)]
 #     for i in range(0, len(data_test)):
 #         temp = data_array[i, minimizedNewDict.get(word)]
 #         if temp > 0:
@@ -299,11 +308,11 @@ for line in open('./opinion_lexicon/negative-words.txt', 'r'):
 #                 #print(final_array[i+1][2])
 #             elif word in pos_words:
 #                 final_array[i][1] += temp
-#                 final_array[i][2] += 4 * temp # I have a specific Label recomendation
+#                 final_array[i][2] += 3 * temp # I have a specific Label recomendation
 #                 countImpact_Pos += 1
 #             elif word in neg_words:
 #                 final_array[i][1] += temp
-#                 final_array[i][2] += 2 * temp # I have a specific Label recomendation
+#                 final_array[i][2] += 1 * temp # I have a specific Label recomendation
 #                 countImpact_Neg += 1    
 #     count += 1
 #     print(count)
@@ -316,10 +325,10 @@ for line in open('./opinion_lexicon/negative-words.txt', 'r'):
 
 # print(final_array[0:50])
 
-# save('Count.pkl', final_array)
+# save('.pickled_models/kaggle/CountTest.pkl', final_array)
 # quit()
 
-final_array_final = load('Count.pkl')
+final_array_final = load('.pickled_models/kaggle/CountTest.pkl')
 
 # x = final_array_final[np.argsort(final_array_final[:, 1])]
 # print(x[50000:52000])
@@ -345,7 +354,7 @@ final_array_final = final_array_final[:,0]
         
 #Print_Result_Metrics(labels_test, final_array_final, datasettargetnames, '')  
 
-predicted = load('PredictedRegression.pkl')
+predicted = load('.pickled_models/kaggle/PredictedRegression.pkl')
 
 #Print_Result_Metrics(labels_test, predicted, datasettargetnames, '') 
 
@@ -411,18 +420,24 @@ for i, score in enumerate(final_array_final):
 
 #Print_Result_Metrics(labels_test, predicted, datasettargetnames, '') 
 
+# save('.pickled_models/kaggle/PredictedRegressionPlusCounting.pkl', predicted)
+# quit()
+
 ### Model 3 COMBINE ALL
 
-neuralnetwork = load('PredictedNeuralNetwork.pkl')
-logisticregression = load('PredictedRegression.pkl')
+neuralnetwork = load('.pickled_models/kaggle/PredictedNeuralNetwork.pkl')
+logisticregression = load('.pickled_models/kaggle/PredictedRegressionPlusCounting.pkl')
 
-Print_Result_Metrics(labels_test, neuralnetwork, datasettargetnames, '')
+#Print_Result_Metrics(labels_test, neuralnetwork, datasettargetnames, '')
 
 for i, score in enumerate(logisticregression):
     if (score == 0) or (score == 4):
         neuralnetwork[i] = score
 
-Print_Result_Metrics(labels_test, neuralnetwork, datasettargetnames, '') 
+save('.pickled_models/kaggle/FinalCombined.pkl', neuralnetwork)
+quit()
+
+#Print_Result_Metrics(labels_test, neuralnetwork, datasettargetnames, '') 
 
 # output_file = pd.DataFrame(data={'PhraseId':labels_test, 'Sentiment':predicted})
 # output_file.to_csv('submission.csv', index=False)
