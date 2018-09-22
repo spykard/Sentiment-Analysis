@@ -267,7 +267,7 @@ pipeline = make_pipeline_imb( # Optimal
 # Get Sentiment Words from a generic Opinion Lexicon
 
 print("Loading Special Weights...")
-specialweights = pd.read_csv("./pickled_models/kaggle_movie/Special_Weights.csv", sep=",")
+specialweights = pd.read_csv("./opinion_lexicon/kaggle_movie_all-sentiment-weights.csv", sep=",")
 print("Special Weights shape:", specialweights.shape)
 
 specialweights.columns = ['Word', 'Count', 'Sum/Count']
