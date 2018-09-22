@@ -35,20 +35,16 @@ import gzip
 
 def load(file_name):
     # load the model
-    stream = gzip.open(file_name, "rb")
-    model = pickle.load(stream)
-    stream.close()
-    return model
-
+    with open(file_name, "rb") as handle:
+        x = pickle.load(handle)
+    return x
 
 def save(file_name, model):
     # save the model
-    stream = gzip.open(file_name, "wb")
-    pickle.dump(model, stream)
-    stream.close()
+    with open(file_name, "wb") as handle:
+        pickle.dump(model, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-
-def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data_train, data_test, labels_train, labels_test, targetnames, stopwords_complete_lemmatized, model_name):
+def Run_Classifier(grid_search_enable, pickle_enable, unlabeled_test_enable, pipeline, parameters, data_train, data_test, labels_train, labels_test, targetnames, stopwords_complete_lemmatized, model_name):
     '''    Run Classifier with or without Grid Search after Preprocessing is done    '''
 
     ## PREPARE ON - Grid Search to Look for the Best Parameters
@@ -86,15 +82,16 @@ def Run_Classifier(grid_search_enable, pickle_enable, pipeline, parameters, data
 
         # (1) TRAIN
         pipeline.fit(data_train, labels_train)
-        if model_name != '(MultiLayer Perceptron)': print('\nNumber of Features/Dimension is:', pipeline.named_steps['sgdclassifier'].coef_.shape[1])
+        if model_name != 'mlpclassifier': print('\nNumber of Features/Dimension is:', pipeline.named_steps[model_name].coef_.shape[1])
 
         # (2) Model Persistence (Pickle)
-        if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/review_polarity/Classifier.pkl') 
+        if pickle_enable == 1: joblib.dump(pipeline, './pickled_models/kaggle_review/Classifier.pkl') 
 
         # (3) PREDICT
         predicted = pipeline.predict(data_test)
 
-    Print_Result_Metrics(labels_test, predicted, targetnames, model_name)  
+    if unlabeled_test_enable == 0:
+        Print_Result_Metrics(labels_test, predicted, targetnames, model_name)  
 
     return predicted
 
@@ -120,7 +117,6 @@ class LemmaTokenizer(object):
 
         return temp
 
-from sklearn.base import TransformerMixin, BaseEstimator
 
 ### PREPROCESSING
 
@@ -135,14 +131,16 @@ from imblearn.over_sampling import SMOTE
 from imblearn.combine import SMOTEENN 
 from imblearn.pipeline import make_pipeline as make_pipeline_imb
 from imblearn.metrics import classification_report_imbalanced
+from sklearn.base import TransformerMixin, BaseEstimator
 import pickle
 
 print("Loading data...")
-train = pd.read_csv("./datasets/kaggle/train.tsv", sep="\t")
+train = pd.read_csv("./datasets/kaggle_movie/train.tsv", sep="\t")
 print("Train shape:", train.shape)
 
-testset = pd.read_csv("./datasets/kaggle/test.tsv", sep="\t")
+testset = pd.read_csv("./datasets/kaggle_movie/test.tsv", sep="\t")
 print("Train shape:", testset.shape)
+
 
 datasettargetnames = ['0', '1', '2', '3', '4']
 
@@ -152,60 +150,51 @@ stopwords_complete_lemmatized = set([wnl.lemmatize(word) for word in stopwords_c
 
 np.set_printoptions(precision=10)  # Numpy Precision when Printing
 
+# # Remove Instances from the Data that will have a vector of only Zeros
+# count_vect_1 = FeatureUnion(transformer_list=[      
+#                         ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
+#                         ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
+
+#                         transformer_weights={
+#                             'vect1': 1.0,
+#                             'vect2': 1.0,},
+#                     )
+
+# data_test_counts_1 = count_vect_1.fit_transform(train['Phrase'])
+
+# total_x, total_y = data_test_counts_1.shape
+
+# #print(data_test_counts_1[3])
+# #print(data_test_counts_1[0, 2345])
+
+# #data_array_1 = data_test_counts_1.toarray()
+# #todelete = np.where(data_test_counts_1 == 0)
+# x_nonzero, y_nonzero = np.nonzero(data_test_counts_1)
+
+# #print(total_x, total_y)
+# #print(len(set(x_nonzero)), len(set(y_nonzero)))
+# x_zero = list(set(range(0, total_x-1)) - set(x_nonzero))
+# y_zero = list(set(range(0, total_y-1)) - set(y_nonzero))
+
+# print("Removing", len(x_zero), "empty Instances from Data...")
+
+# train = train.drop(train.index[x_zero])
+
+
+# print(load("./pickled_models/kaggle_movie/PredictedRegression.pkl").shape)
+# quit()
+
+# train.hist(column="Sentiment")
+# plt.xlabel("Trip_distance",fontsize=15)
+# plt.ylabel("Frequency",fontsize=15)
+# plt.show()
+# quit()
+
 # Split, data & labels are pairs
 data_train, data_test, labels_train, labels_test = train_test_split(train['Phrase'], train['Sentiment'], test_size=0.20, random_state=22)
 
-
-
-count_vect_1 = FeatureUnion(transformer_list=[      
-                        ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
-                        ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
-
-                        transformer_weights={
-                            'vect1': 1.0,
-                            'vect2': 1.0,},
-                    )
-
-data_test_counts_1 = count_vect_1.fit_transform(testset['Phrase'])
-
-total_x, total_y = data_test_counts_1.shape
-
-#print(data_test_counts_1[3])
-#print(data_test_counts_1[0, 2345])
-
-#data_array_1 = data_test_counts_1.toarray()
-#todelete = np.where(data_test_counts_1 == 0)
-x_nonzero, y_nonzero = np.nonzero(data_test_counts_1)
-
-print(total_x, total_y)
-print(len(x_nonzero), len(y_nonzero))
-
-quit()
-
-print(todelete[0:100])
-quit()
-
-
-# SGD 0.54 accuracy
-
-# Grid Search Off
-pipeline = make_pipeline_imb( # Optimal
-                            FeatureUnion(transformer_list=[      
-                                ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
-                                ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
-
-                                transformer_weights={
-                                    'vect1': 1.0,
-                                    'vect2': 1.0,},
-                            ),
-                            TfidfTransformer(use_idf=True),
-                            RandomUnderSampler(ratio={2: 20000}, random_state=22),
-                            SelectFromModel(estimator=LinearSVC(), threshold='1.5*mean'),  # Dimensionality Reduction               
-                            SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=1000, tol=None, n_jobs=-1, class_weight='balanced'),)  
-
-predicted = Run_Classifier(0, 0, pipeline, {}, data_train, data_test, labels_train, labels_test, datasettargetnames, stopwords_complete_lemmatized, '(SGD)')
-###
-quit()
+from sklearn.feature_extraction.text import TfidfVectorizer
+from scipy.sparse import hstack
 
 # MLP 0.60
 
@@ -220,15 +209,15 @@ pipeline = make_pipeline_imb( # Optimal
                                     'vect2': 1.0,},
                             ),
                             TfidfTransformer(use_idf=True),                           
-                            RandomUnderSampler(ratio={2: 32000}, random_state=22),
+                            #RandomUnderSampler(ratio={2: 32000}, random_state=22),
                             SelectFromModel(estimator=LinearSVC(), threshold='1.2*mean'),  # Dimensionality Reduction               
                             #MLPClassifier(verbose=True, hidden_layer_sizes=(200,), max_iter=100, solver='sgd', learning_rate='adaptive', learning_rate_init=0.60, momentum=0.50, alpha=1e-01),)  
                             MLPClassifier(verbose=True, random_state=22, hidden_layer_sizes=(100,), max_iter=100, solver='sgd', learning_rate='constant', learning_rate_init=0.07, momentum=0.90, alpha=1e-01),)
 
-#predicted = Run_Classifier(0, 0, pipeline, {}, train['Phrase'], testset['Phrase'], train['Sentiment'], [], datasettargetnames, stopwords_complete_lemmatized, '(MultiLayer Perceptron)')
+#predicted = Run_Classifier(0, 0, 1, pipeline, {}, train['Phrase'], testset['Phrase'], train['Sentiment'], [], datasettargetnames, stopwords_complete_lemmatized, 'mlpclassifier')
 ###
 
-#save('.pickled_models/kaggle/PredictedNeuralNetwork.pkl', predicted)
+#save("./pickled_models/kaggle_movie/PredictedNeuralNetwork.pkl", predicted)
 #quit()
 
 ### Model 2
@@ -238,8 +227,8 @@ pipeline = make_pipeline_imb( # Optimal
 # Grid Search Off
 pipeline = make_pipeline_imb( # Optimal
                             FeatureUnion(transformer_list=[      
-                                ('vect1', CountVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())),  # 1-Gram Vectorizer
-                                ('vect2', CountVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 2), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer())),],  # 2-Gram Vectorizer
+                                ('vect1', TfidfVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer(), sublinear_tf=True, analyzer='word')),  # 1-Gram Vectorizer
+                                ('vect2', TfidfVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 3), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer(), sublinear_tf=True, analyzer='word')),],  # 2-Gram Vectorizer
 
                                 transformer_weights={
                                     'vect1': 1.0,
@@ -247,20 +236,38 @@ pipeline = make_pipeline_imb( # Optimal
                             ),
                             TfidfTransformer(use_idf=True),
                             #SMOTE(ratio={0: 12500, 4: 14500}, random_state=22),
-                            RandomUnderSampler(ratio={1: 19000, 2: 27200, 3: 20000}, random_state=22),
-                            SelectKBest(score_func=chi2, k=5000),  # Dimensionality Reduction                  
-                            LogisticRegression(penalty='l2', max_iter=1000, C=500, dual=True, class_weight='balanced', random_state=22),)  
+                            #RandomUnderSampler(ratio={1: 19000, 2: 27200, 3: 20000}, random_state=22),
+                            # Note  k = 5000, max_iter 1000
+                            SelectKBest(score_func=chi2, k=18000),  # Dimensionality Reduction                  
+                            LogisticRegression(solver='sag', penalty='l2', max_iter=1000, C=500, dual=True, class_weight='balanced', random_state=22),)  
 
-#predicted = Run_Classifier(0, 0, pipeline, {}, train['Phrase'], testset['Phrase'], train['Sentiment'], [], datasettargetnames, stopwords_complete_lemmatized, '(Logistic Regression)')
+#predicted = Run_Classifier(0, 0, 1, pipeline, {}, train['Phrase'], testset['Phrase'], train['Sentiment'], [], datasettargetnames, stopwords_complete_lemmatized, 'logisticregression')
 ###
 
-#save('.pickled_models/kaggle/PredictedRegression.pkl', predicted)
+# trainplustest = pd.concat([train['Phrase'], testset['Phrase']])
+
+# vectorizer1 = FeatureUnion(transformer_list=[      
+#                                 ('vect1', TfidfVectorizer(max_df=0.80, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer(), sublinear_tf=True, analyzer='word')),  # 1-Gram Vectorizer
+#                                 ('vect2', TfidfVectorizer(max_df=0.95, min_df=8, ngram_range=(2, 3), stop_words=None, strip_accents='unicode', tokenizer=LemmaTokenizer(), sublinear_tf=True, analyzer='word')),],  # 2-Gram Vectorizer
+
+#                                 transformer_weights={
+#                                     'vect1': 1.0,
+#                                     'vect2': 1.0,},
+#                             )
+
+# vectorizer1.fit(trainplustest)
+# train_word_features = vectorizer1.transform(train['Phrase'])
+# test_word_features = vectorizer1.transform(testset['Phrase'])
+
+
+
+#save("./pickled_models/kaggle_movie/PredictedRegression.pkl", predicted)
 #quit()
 
 # Get Sentiment Words from a generic Opinion Lexicon
 
 print("Loading Special Weights...")
-specialweights = pd.read_csv("./pickled_models/kaggle/special_Weights.csv", sep=",")
+specialweights = pd.read_csv("./pickled_models/kaggle_movie/Special_Weights.csv", sep=",")
 print("Special Weights shape:", specialweights.shape)
 
 specialweights.columns = ['Word', 'Count', 'Sum/Count']
@@ -278,7 +285,10 @@ for line in open('./opinion_lexicon/positive-words.txt', 'r'):
 
 for line in open('./opinion_lexicon/negative-words.txt', 'r'):
     neg_words.append(line.rstrip())  # Must strip Newlines  
-   
+
+#print(load("./pickled_models/kaggle_movie/CountTest.pkl")[0:50])
+#quit()
+
 
 # count_vect = CountVectorizer(max_df=0.95, min_df=5, ngram_range=(1, 1), stop_words=stopwords_complete_lemmatized, strip_accents='unicode', tokenizer=LemmaTokenizer())
 # data_test_counts = count_vect.fit_transform(testset['Phrase'])
@@ -291,8 +301,8 @@ for line in open('./opinion_lexicon/negative-words.txt', 'r'):
 # combinePosNeg = pos_words + sorted(set(neg_words) - set(pos_words))
 
 # #final_array[1][0] = 2
-# #save('.pickled_models/kaggle/Count.pkl', final_array[:][0])
-# #print(load('.pickled_models/kaggle/Count.pkl'))
+# #save("./pickled_models/kaggle_movie/Count.pkl", final_array[:][0])
+# #print(load("/.pickled_models/kaggle_movie/Count.pkl"))
 
 # minimizedNewDict = {}
 
@@ -334,10 +344,10 @@ for line in open('./opinion_lexicon/negative-words.txt', 'r'):
 
 # print(final_array[0:50])
 
-# save('.pickled_models/kaggle/CountTest.pkl', final_array)
+# save("./pickled_models/kaggle_movie/CountTest.pkl", final_array)
 # quit()
 
-final_array_final = load('.pickled_models/kaggle/CountTest.pkl')
+final_array_final = load("./pickled_models/kaggle_movie/CountTest.pkl")
 
 # x = final_array_final[np.argsort(final_array_final[:, 1])]
 # print(x[50000:52000])
@@ -363,7 +373,8 @@ final_array_final = final_array_final[:,0]
         
 #Print_Result_Metrics(labels_test, final_array_final, datasettargetnames, '')  
 
-predicted = load('.pickled_models/kaggle/PredictedRegression.pkl')
+
+predicted = load("./pickled_models/kaggle_movie/PredictedRegression.pkl")
 
 #Print_Result_Metrics(labels_test, predicted, datasettargetnames, '') 
 
@@ -429,13 +440,13 @@ for i, score in enumerate(final_array_final):
 
 #Print_Result_Metrics(labels_test, predicted, datasettargetnames, '') 
 
-# save('.pickled_models/kaggle/PredictedRegressionPlusCounting.pkl', predicted)
-# quit()
+#save("./pickled_models/kaggle_movie/PredictedRegressionPlusCounting.pkl", predicted)
+#quit()
 
 ### Model 3 COMBINE ALL
 
-neuralnetwork = load('.pickled_models/kaggle/PredictedNeuralNetwork.pkl')
-logisticregression = load('.pickled_models/kaggle/PredictedRegressionPlusCounting.pkl')
+neuralnetwork = load("./pickled_models/kaggle_movie/PredictedNeuralNetwork.pkl")
+logisticregression = load("./pickled_models/kaggle_movie/PredictedRegressionPlusCounting.pkl")
 
 #Print_Result_Metrics(labels_test, neuralnetwork, datasettargetnames, '')
 
@@ -443,7 +454,7 @@ for i, score in enumerate(logisticregression):
     if (score == 0) or (score == 4):
         neuralnetwork[i] = score
 
-save('.pickled_models/kaggle/FinalCombined.pkl', neuralnetwork)
+save("./pickled_models/kaggle_movie/FinalCombined.pkl", neuralnetwork)
 quit()
 
 #Print_Result_Metrics(labels_test, neuralnetwork, datasettargetnames, '') 
