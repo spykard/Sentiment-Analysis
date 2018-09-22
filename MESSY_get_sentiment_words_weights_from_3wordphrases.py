@@ -1,5 +1,5 @@
 '''
-Get Sentiment Weight by Word Counting in Small Phrases
+Get counted word sentiment of words from Small Phrases
 '''
 
 from sklearn.model_selection import train_test_split
