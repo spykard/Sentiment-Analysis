@@ -1,5 +1,5 @@
 '''
-Get counted word sentiment of words from Small Phrases
+Get counted word sentiment weight of words from Small Phrases
 '''
 
 from sklearn.model_selection import train_test_split
@@ -35,29 +35,6 @@ from sklearn.svm import SVC
 from imblearn.combine import SMOTETomek 
 from imblearn.pipeline import make_pipeline as make_pipeline_imb
 from imblearn.metrics import classification_report_imbalanced
-
-def Print_Result_Metrics(labels_test, predicted, targetnames):
-    '''    Print Metrics after Training etc.    '''
-    print('\n- - - - - RESULT METRICS - - - - -')
-    print('Exact Accuracy: ', metrics.accuracy_score(labels_test, predicted))
-    print(metrics.classification_report(labels_test, predicted, target_names=targetnames))
-    print(metrics.confusion_matrix(labels_test, predicted))
-
-class LemmaTokenizer(object):
-    '''    Override SciKit's default Tokenizer    '''
-    def __init__(self):
-        self.wnl = WordNetLemmatizer()
-        # This punctuation remover has the best Speed Performance
-        self.translator = str.maketrans('','', sub('\'', '', string.punctuation))
-    def __call__(self, doc):
-        # return [self.wnl.lemmatize(t.lower()) for t in word_tokenize(doc)]
-        temp = []
-        for t in word_tokenize(doc):
-            x = t.translate(self.translator) 
-            if x != '': temp.append(self.wnl.lemmatize(x.lower())) 
-        
-        return temp
-
 
 print("Loading data...")
 train = pd.read_csv("./kaggle_temp/train.tsv", sep="\t")
