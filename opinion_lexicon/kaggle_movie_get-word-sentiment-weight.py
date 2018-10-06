@@ -56,7 +56,4 @@ for key, value in combinedEmotionalDict.items():
 for k in todelete: del combinedEmotionalDict[k]
 
 output_file = pd.DataFrame.from_dict(combinedEmotionalDict, orient='index', columns=['Count', 'Sum/Count'])
-output_file.to_csv('specialWeights.csv', index=True, sep="\t")
-
-
-quit()
+output_file.to_csv('specialWeights.csv', index=True)
